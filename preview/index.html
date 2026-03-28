@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Space Monitor — Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ─── DESIGN TOKENS ─────────────────────────────────────────────────── */
+:root {
+  --color-primary:       #2F75B9;
+  --color-primary-hover: #3d87cc;
+  --color-accent:        #37BC75;
+  --color-accent-dark:   #2da864;
+
+  /* LIGHT MODE */
+  --color-bg:            #F5EEE4;
+  --color-surface:       #FFFFFF;
+  --color-surface-2:     #f0ebe3;
+  --color-sidebar-bg:    #FFFFFF;
+  --color-text:          #091628;
+  --color-text-muted:    #5a6a7e;
+  --color-border:        #ddd6cb;
+  --color-nav-active:    #eef4fb;
+
+  /* Status */
+  --color-ok:       #37BC75;
+  --color-warning:  #f59e0b;
+  --color-critical: #ef4444;
+  --color-info:     #2F75B9;
+
+  /* Layout */
+  --sidebar-width:  240px;
+  --topnav-height:  56px;
+  --radius-sm:      6px;
+  --radius-md:      10px;
+  --radius-lg:      16px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(9,22,40,0.08);
+  --shadow-md: 0 4px 12px rgba(9,22,40,0.10);
+
+  --font: 'Inter', sans-serif;
+  --transition: 0.2s ease;
+}
+
+[data-theme="dark"] {
+  --color-bg:         #091628;
+  --color-surface:    #0f2035;
+  --color-surface-2:  #152840;
+  --color-sidebar-bg: #0d1e31;
+  --color-text:       #F5EEE4;
+  --color-text-muted: #8fa5bd;
+  --color-border:     #1e3350;
+  --color-nav-active: #1a3255;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+/* ─── RESET ────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font);
+  background: var(--color-bg);
+  color: var(--color-text);
+  transition: background var(--transition), color var(--transition);
+  font-size: 14px;
+  line-height: 1.5;
+}
+a { text-decoration: none; color: inherit; }
+button { font-family: var(--font); cursor: pointer; border: none; background: none; }
+
+/* ─── LAYOUT ───────────────────────────────────────────────────────────── */
+.app { display: flex; height: 100vh; overflow: hidden; }
+
+/* ─── SIDEBAR ──────────────────────────────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--color-sidebar-bg);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  transition: background var(--transition), border-color var(--transition);
+  z-index: 10;
+}
+
+.sidebar-logo {
+  height: var(--topnav-height);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--color-border);
+  gap: 10px;
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.3px;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 0;
+  overflow-y: auto;
+}
+
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--color-text-muted);
+  padding: 12px 20px 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px;
+  border-radius: 0;
+  color: var(--color-text-muted);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+  margin: 1px 8px;
+  border-radius: var(--radius-sm);
+}
+.nav-item:hover { background: var(--color-nav-active); color: var(--color-text); }
+.nav-item.active {
+  background: var(--color-nav-active);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.nav-item.active .nav-icon { color: var(--color-primary); }
+.nav-item.danger { color: #ef4444; }
+.nav-item.danger:hover { background: #fef2f2; }
+[data-theme="dark"] .nav-item.danger:hover { background: #2d1515; }
+
+.nav-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+.nav-item.active .nav-icon,
+.nav-item:hover .nav-icon { color: inherit; }
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--color-critical);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.nav-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 8px 16px;
+}
+
+.sidebar-user {
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-email { font-size: 11px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ─── MAIN ─────────────────────────────────────────────────────────────── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* ─── TOP NAV ──────────────────────────────────────────────────────────── */
+.topnav {
+  height: var(--topnav-height);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 0;
+  transition: background var(--transition), border-color var(--transition);
+  flex-shrink: 0;
+}
+
+.topnav-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-right: 32px;
+  white-space: nowrap;
+}
+
+.topnav-tabs {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+}
+
+.tab-btn {
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+  white-space: nowrap;
+}
+.tab-btn:hover { background: var(--color-nav-active); color: var(--color-text); }
+.tab-btn.active {
+  background: var(--color-nav-active);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.topnav-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.theme-toggle-btn:hover { background: var(--color-nav-active); color: var(--color-text); }
+
+.notif-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  position: relative;
+  transition: background var(--transition);
+}
+.notif-btn:hover { background: var(--color-nav-active); color: var(--color-text); }
+.notif-dot {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 8px; height: 8px;
+  background: var(--color-critical);
+  border-radius: 50%;
+  border: 2px solid var(--color-surface);
+}
+
+/* ─── CONTENT ──────────────────────────────────────────────────────────── */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* ─── PAGE SECTIONS ────────────────────────────────────────────────────── */
+.page { display: none; }
+.page.active { display: block; }
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.page-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.page-subtitle {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* ─── STAT STRIP ───────────────────────────────────────────────────────── */
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition), border-color var(--transition);
+}
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.stat-icon.blue  { background: #dbeafe; color: var(--color-primary); }
+.stat-icon.green { background: #d1fae5; color: var(--color-accent); }
+.stat-icon.amber { background: #fef3c7; color: #d97706; }
+.stat-icon.red   { background: #fee2e2; color: var(--color-critical); }
+[data-theme="dark"] .stat-icon.blue  { background: #1e3a5f; }
+[data-theme="dark"] .stat-icon.green { background: #14432e; }
+[data-theme="dark"] .stat-icon.amber { background: #422a05; }
+[data-theme="dark"] .stat-icon.red   { background: #420a0a; }
+
+.stat-info { flex: 1; }
+.stat-value { font-size: 22px; font-weight: 700; color: var(--color-text); line-height: 1.1; }
+.stat-label { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
+.stat-delta { font-size: 11px; font-weight: 600; margin-top: 4px; }
+.stat-delta.up   { color: var(--color-accent); }
+.stat-delta.down { color: var(--color-critical); }
+
+/* ─── SECTION GRID ─────────────────────────────────────────────────────── */
+.section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+.section-grid.triple { grid-template-columns: 1fr 1fr 1fr; }
+.section-grid.full { grid-template-columns: 1fr; }
+
+/* ─── CARD ─────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: background var(--transition), border-color var(--transition);
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-body { padding: 16px 20px; }
+.card-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+}
+
+/* ─── INSTANCE CARD ────────────────────────────────────────────────────── */
+.instance-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.15s, background var(--transition), border-color var(--transition);
+}
+.instance-card:hover { box-shadow: var(--shadow-md); }
+
+.instance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.instance-name { font-size: 14px; font-weight: 700; }
+.instance-url  { font-size: 11px; color: var(--color-text-muted); margin-top: 1px; }
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.status-badge::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+.status-badge.ok       { background:#d1fae5; color:#065f46; }
+.status-badge.degraded { background:#fef3c7; color:#92400e; }
+.status-badge.down     { background:#fee2e2; color:#991b1b; animation: none; }
+[data-theme="dark"] .status-badge.ok       { background:#14432e; color:#6ee7b7; }
+[data-theme="dark"] .status-badge.degraded { background:#422a05; color:#fcd34d; }
+[data-theme="dark"] .status-badge.down     { background:#420a0a; color:#fca5a5; }
+
+.instance-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.metric-item { text-align: center; }
+.metric-value { font-size: 18px; font-weight: 700; color: var(--color-text); }
+.metric-label { font-size: 10px; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+.delta-row {
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.delta-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+.delta-label { color: var(--color-text-muted); display: flex; align-items: center; gap: 5px; }
+.delta-ok   { color: var(--color-accent); font-weight: 600; }
+.delta-warn { color: var(--color-warning); font-weight: 600; }
+.delta-crit { color: var(--color-critical); font-weight: 600; }
+
+/* ─── VPS CARD ─────────────────────────────────────────────────────────── */
+.vps-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition), border-color var(--transition);
+}
+.vps-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.vps-name { font-size: 13px; font-weight: 700; }
+.vps-host { font-size: 11px; color: var(--color-text-muted); margin-top: 1px; }
+
+.gauge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+.gauge-item { display: flex; flex-direction: column; gap: 4px; }
+.gauge-header { display: flex; justify-content: space-between; }
+.gauge-name  { font-size: 11px; color: var(--color-text-muted); font-weight: 500; }
+.gauge-value { font-size: 11px; font-weight: 700; }
+.gauge-value.ok   { color: var(--color-accent); }
+.gauge-value.warn { color: var(--color-warning); }
+.gauge-value.crit { color: var(--color-critical); }
+
+.progress-bar {
+  height: 6px;
+  background: var(--color-surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.progress-fill.ok   { background: var(--color-accent); }
+.progress-fill.warn { background: var(--color-warning); }
+.progress-fill.crit { background: var(--color-critical); }
+
+.containers-list { display: flex; flex-direction: column; gap: 6px; }
+.container-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+.container-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.container-dot.running { background: var(--color-accent); }
+.container-dot.stopped { background: var(--color-critical); }
+.container-name { flex: 1; font-weight: 500; }
+.container-uptime { color: var(--color-text-muted); font-size: 11px; }
+
+/* ─── ALERT ROW ────────────────────────────────────────────────────────── */
+.alerts-table { width: 100%; border-collapse: collapse; }
+.alerts-table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+.alerts-table td {
+  padding: 10px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+.alerts-table tr:last-child td { border-bottom: none; }
+.alerts-table tr:hover td { background: var(--color-surface-2); }
+
+.severity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.severity-chip.critical { background: #fee2e2; color: #991b1b; }
+.severity-chip.warning  { background: #fef3c7; color: #92400e; }
+.severity-chip.info     { background: #dbeafe; color: #1e40af; }
+[data-theme="dark"] .severity-chip.critical { background: #420a0a; color: #fca5a5; }
+[data-theme="dark"] .severity-chip.warning  { background: #422a05; color: #fcd34d; }
+[data-theme="dark"] .severity-chip.info     { background: #1e3a5f; color: #93c5fd; }
+
+.ack-btn {
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.ack-btn:hover { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+
+/* ─── CHART PLACEHOLDER ────────────────────────────────────────────────── */
+.chart-placeholder {
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+  height: 160px;
+  display: flex;
+  align-items: flex-end;
+  padding: 12px;
+  gap: 6px;
+  overflow: hidden;
+}
+.chart-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  justify-content: flex-end;
+}
+.chart-bar {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  min-height: 4px;
+  transition: height 0.3s;
+}
+.chart-bar.email { background: var(--color-primary); opacity: 0.8; }
+.chart-bar.sms   { background: var(--color-accent); opacity: 0.8; }
+.chart-label { font-size: 9px; color: var(--color-text-muted); }
+
+/* ─── GATEWAY CARD ─────────────────────────────────────────────────────── */
+.gw-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.gw-stat {
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.gw-stat-value { font-size: 20px; font-weight: 700; }
+.gw-stat-label { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
+
+/* ─── BTN ──────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition);
+}
+.btn-primary { background: var(--color-primary); color: #fff; }
+.btn-primary:hover { background: var(--color-primary-hover); }
+.btn-secondary {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+.btn-secondary:hover { background: var(--color-nav-active); }
+
+/* ─── FLOATING THEME TOGGLE ────────────────────────────────────────────── */
+.float-theme-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(47,117,185,0.4);
+  transition: all var(--transition);
+  z-index: 100;
+}
+.float-theme-btn:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(47,117,185,0.5); }
+
+/* ─── LOG ROW ──────────────────────────────────────────────────────────── */
+.log-entry {
+  font-size: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.log-entry:last-child { border-bottom: none; }
+.log-time { color: var(--color-text-muted); white-space: nowrap; font-size: 11px; }
+.log-container { color: var(--color-primary); font-weight: 600; white-space: nowrap; }
+.log-msg { color: var(--color-text); flex: 1; }
+
+/* ─── EMPTY STATE ──────────────────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--color-text-muted);
+}
+.empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.5; }
+.empty-text { font-size: 14px; font-weight: 500; }
+.empty-sub  { font-size: 12px; margin-top: 4px; }
+
+/* ─── SCROLLBAR ────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+
+/* ─── TOOLTIP PREVIEW BANNER ───────────────────────────────────────────── */
+.preview-banner {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  color: #fff;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px;
+  z-index: 999;
+  letter-spacing: 0.2px;
+}
+.app { padding-top: 30px; }
+</style>
+</head>
+<body>
+
+<div class="preview-banner">
+  🎨 Space Monitor — Preview de Layout para Aprovação &nbsp;·&nbsp; Alterne dark/light com o botão ☀/🌙
+</div>
+
+<div class="app">
+
+  <!-- ═══ SIDEBAR ════════════════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <!-- Logo Space CRM SVG inline -->
+      <svg class="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="7" fill="#091628"/>
+        <path d="M6 16L11 10L6 16Z" stroke="#37BC75" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <path d="M6 16L11 22" stroke="#37BC75" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M26 16L21 10L26 16Z" stroke="#37BC75" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <path d="M26 16L21 22" stroke="#37BC75" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M13.5 22L18.5 10" stroke="#2F75B9" stroke-width="2.4" stroke-linecap="round"/>
+      </svg>
+      <span class="logo-text">Space</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Monitoramento</div>
+
+      <div class="nav-item active" onclick="showPage('dashboard', this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+        </svg>
+        Dashboard
+      </div>
+
+      <div class="nav-item" onclick="showPage('instances', this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="12" cy="5" rx="9" ry="3"/>
+          <path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"/>
+          <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>
+        </svg>
+        Instâncias
+      </div>
+
+      <div class="nav-item" onclick="showPage('gateways', this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 014.25 11.5a19.79 19.79 0 01-3.07-8.63A2 2 0 013.16 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L7.09 8.91A16 16 0 0015.09 17l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+        </svg>
+        Gateways
+      </div>
+
+      <div class="nav-item" onclick="showPage('vps', this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <path d="M8 21h8M12 17v4"/>
+        </svg>
+        VPS &amp; Logs
+      </div>
+
+      <div class="nav-item" onclick="showPage('alerts', this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 01-3.46 0"/>
+        </svg>
+        Alertas
+        <span class="nav-badge">3</span>
+      </div>
+
+      <div class="nav-divider"></div>
+      <div class="nav-section-label">Sistema</div>
+
+      <div class="nav-item" onclick="showPage('users', this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+        </svg>
+        Usuários
+      </div>
+
+      <div class="nav-item" onclick="showPage('settings', this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+        Configurações
+      </div>
+
+      <div class="nav-divider"></div>
+      <div class="nav-item danger">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+          <polyline points="16,17 21,12 16,7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Sair
+      </div>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-avatar">RF</div>
+      <div class="user-info">
+        <div class="user-name">Ricardo Faria</div>
+        <div class="user-email">ricardo@spacecrm.online</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═══════════════════════════════════════════════════════════ -->
+  <div class="main">
+
+    <!-- TOP NAV -->
+    <header class="topnav">
+      <span class="topnav-title" id="topnav-title">Dashboard</span>
+      <div class="topnav-tabs" id="topnav-tabs"></div>
+      <div class="topnav-actions">
+        <button class="theme-toggle-btn" onclick="toggleTheme()" id="theme-btn">
+          <span id="theme-icon">☀️</span>
+          <span id="theme-label">Light</span>
+        </button>
+        <div class="notif-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 01-3.46 0"/>
+          </svg>
+          <div class="notif-dot"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- ── PAGE: DASHBOARD ─────────────────────────────────────────── -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Visão Geral</div>
+            <div class="page-subtitle">Atualizado agora mesmo · 3 instâncias monitoradas</div>
+          </div>
+          <button class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+            Atualizar
+          </button>
+        </div>
+
+        <!-- Stat strip -->
+        <div class="stat-strip">
+          <div class="stat-card">
+            <div class="stat-icon blue">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value">+347</div>
+              <div class="stat-label">Novos contatos hoje</div>
+              <div class="stat-delta up">↑ 12% vs ontem</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value">2.841</div>
+              <div class="stat-label">Emails enviados hoje</div>
+              <div class="stat-delta up">↑ Gateway ✓ Delta ok</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 014.25 11.5"/><path d="M9 4.55c1-.36 2.05-.55 3.12-.55 5.52 0 10 4.48 10 10 0 .78-.09 1.54-.26 2.27"/></svg>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value">1.203</div>
+              <div class="stat-label">SMS enviados hoje</div>
+              <div class="stat-delta up">↑ Gateway ✓ Delta ok</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value">3</div>
+              <div class="stat-label">Alertas ativos</div>
+              <div class="stat-delta down">2 críticos · 1 atenção</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Instâncias grid -->
+        <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:14px;font-weight:700;color:var(--color-text);">Instâncias Mautic</div>
+          <button class="btn btn-secondary" style="font-size:12px;padding:5px 12px;">Ver todas</button>
+        </div>
+        <div class="section-grid triple" style="margin-bottom:24px;">
+          <!-- Instância 1 -->
+          <div class="instance-card">
+            <div class="instance-header">
+              <div>
+                <div class="instance-name">Produção BR</div>
+                <div class="instance-url">mautic1.spacecrm.online</div>
+              </div>
+              <span class="status-badge ok">Online</span>
+            </div>
+            <div class="instance-metrics">
+              <div class="metric-item">
+                <div class="metric-value" style="color:var(--color-primary)">142</div>
+                <div class="metric-label">Contatos/24h</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value">7</div>
+                <div class="metric-label">Campanhas</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value" style="color:var(--color-accent)">98ms</div>
+                <div class="metric-label">Latência</div>
+              </div>
+            </div>
+            <div class="delta-row">
+              <div class="delta-item">
+                <span class="delta-label">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 8h10M7 12h5"/></svg>
+                  Email: Mautic 1.204 → Gateway 1.201
+                </span>
+                <span class="delta-ok">Δ 0.2% ✓</span>
+              </div>
+              <div class="delta-item">
+                <span class="delta-label">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07"/></svg>
+                  SMS: Mautic 502 → Gateway 498
+                </span>
+                <span class="delta-ok">Δ 0.8% ✓</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Instância 2 -->
+          <div class="instance-card">
+            <div class="instance-header">
+              <div>
+                <div class="instance-name">Produção SP</div>
+                <div class="instance-url">mautic2.spacecrm.online</div>
+              </div>
+              <span class="status-badge degraded">Degradado</span>
+            </div>
+            <div class="instance-metrics">
+              <div class="metric-item">
+                <div class="metric-value" style="color:var(--color-primary)">89</div>
+                <div class="metric-label">Contatos/24h</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value">4</div>
+                <div class="metric-label">Campanhas</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value" style="color:var(--color-warning)">2.8s</div>
+                <div class="metric-label">Latência</div>
+              </div>
+            </div>
+            <div class="delta-row">
+              <div class="delta-item">
+                <span class="delta-label">Email: Mautic 1.004 → Gateway 932</span>
+                <span class="delta-warn">Δ 7.2% ⚠</span>
+              </div>
+              <div class="delta-item">
+                <span class="delta-label">SMS: Mautic 430 → Gateway 428</span>
+                <span class="delta-ok">Δ 0.5% ✓</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Instância 3 -->
+          <div class="instance-card">
+            <div class="instance-header">
+              <div>
+                <div class="instance-name">Staging</div>
+                <div class="instance-url">mautic-stg.spacecrm.online</div>
+              </div>
+              <span class="status-badge ok">Online</span>
+            </div>
+            <div class="instance-metrics">
+              <div class="metric-item">
+                <div class="metric-value" style="color:var(--color-primary)">21</div>
+                <div class="metric-label">Contatos/24h</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value">2</div>
+                <div class="metric-label">Campanhas</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value" style="color:var(--color-accent)">145ms</div>
+                <div class="metric-label">Latência</div>
+              </div>
+            </div>
+            <div class="delta-row">
+              <div class="delta-item">
+                <span class="delta-label">Email: Mautic 633 → Gateway 631</span>
+                <span class="delta-ok">Δ 0.3% ✓</span>
+              </div>
+              <div class="delta-item">
+                <span class="delta-label">SMS: Mautic 271 → Gateway 271</span>
+                <span class="delta-ok">Δ 0% ✓</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alertas recentes + Gráfico volume -->
+        <div class="section-grid">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+                Alertas Recentes
+              </div>
+              <span class="severity-chip critical">2 críticos</span>
+            </div>
+            <div>
+              <div class="log-entry">
+                <span class="log-time">14:32</span>
+                <span class="severity-chip critical" style="font-size:10px;padding:1px 6px;">CRIT</span>
+                <span class="log-msg">Produção SP — Delta email acima de 7% (threshold: 5%)</span>
+              </div>
+              <div class="log-entry">
+                <span class="log-time">13:58</span>
+                <span class="severity-chip critical" style="font-size:10px;padding:1px 6px;">CRIT</span>
+                <span class="log-msg">Produção SP — Latência API: 2.8s (threshold: 3s)</span>
+              </div>
+              <div class="log-entry">
+                <span class="log-time">12:15</span>
+                <span class="severity-chip warning" style="font-size:10px;padding:1px 6px;">WARN</span>
+                <span class="log-msg">Produção BR — CPU: 81% (threshold: 80%)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Volume de Envios (últimas 8h)
+              </div>
+              <div style="display:flex;gap:12px;font-size:11px;color:var(--color-text-muted);">
+                <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:var(--color-primary);border-radius:2px;display:inline-block;"></span>Email</span>
+                <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:var(--color-accent);border-radius:2px;display:inline-block;"></span>SMS</span>
+              </div>
+            </div>
+            <div class="card-body" style="padding:12px 16px;">
+              <div class="chart-placeholder">
+                <div class="chart-bar-col"><div class="chart-bar email" style="height:45%"></div><div class="chart-bar sms" style="height:30%"></div><div class="chart-label">06h</div></div>
+                <div class="chart-bar-col"><div class="chart-bar email" style="height:60%"></div><div class="chart-bar sms" style="height:40%"></div><div class="chart-label">07h</div></div>
+                <div class="chart-bar-col"><div class="chart-bar email" style="height:80%"></div><div class="chart-bar sms" style="height:55%"></div><div class="chart-label">08h</div></div>
+                <div class="chart-bar-col"><div class="chart-bar email" style="height:95%"></div><div class="chart-bar sms" style="height:70%"></div><div class="chart-label">09h</div></div>
+                <div class="chart-bar-col"><div class="chart-bar email" style="height:85%"></div><div class="chart-bar sms" style="height:60%"></div><div class="chart-label">10h</div></div>
+                <div class="chart-bar-col"><div class="chart-bar email" style="height:70%"></div><div class="chart-bar sms" style="height:50%"></div><div class="chart-label">11h</div></div>
+                <div class="chart-bar-col"><div class="chart-bar email" style="height:90%"></div><div class="chart-bar sms" style="height:65%"></div><div class="chart-label">12h</div></div>
+                <div class="chart-bar-col"><div class="chart-bar email" style="height:75%"></div><div class="chart-bar sms" style="height:48%"></div><div class="chart-label">13h</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PAGE: VPS ───────────────────────────────────────────────── -->
+      <div class="page" id="page-vps">
+        <div class="page-header">
+          <div>
+            <div class="page-title">VPS &amp; Logs de Serviços</div>
+            <div class="page-subtitle">Recursos do sistema e logs dos containers Docker</div>
+          </div>
+        </div>
+        <div class="section-grid triple" style="margin-bottom:24px;">
+          <!-- VPS 1 -->
+          <div class="vps-card">
+            <div class="vps-header">
+              <div>
+                <div class="vps-name">VPS Produção BR</div>
+                <div class="vps-host">192.168.1.10 · Ubuntu 22.04</div>
+              </div>
+              <span class="status-badge ok">Online</span>
+            </div>
+            <div class="gauge-grid">
+              <div class="gauge-item">
+                <div class="gauge-header">
+                  <span class="gauge-name">CPU</span>
+                  <span class="gauge-value warn">81%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill warn" style="width:81%"></div></div>
+              </div>
+              <div class="gauge-item">
+                <div class="gauge-header">
+                  <span class="gauge-name">Memória</span>
+                  <span class="gauge-value ok">62%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill ok" style="width:62%"></div></div>
+              </div>
+              <div class="gauge-item">
+                <div class="gauge-header">
+                  <span class="gauge-name">Disco</span>
+                  <span class="gauge-value ok">44%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill ok" style="width:44%"></div></div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:8px;font-weight:600;">Containers</div>
+            <div class="containers-list">
+              <div class="container-row"><div class="container-dot running"></div><span class="container-name">mautic_app</span><span class="container-uptime">12d</span></div>
+              <div class="container-row"><div class="container-dot running"></div><span class="container-name">mautic_db</span><span class="container-uptime">12d</span></div>
+              <div class="container-row"><div class="container-dot running"></div><span class="container-name">mautic_nginx</span><span class="container-uptime">12d</span></div>
+            </div>
+          </div>
+
+          <!-- VPS 2 -->
+          <div class="vps-card">
+            <div class="vps-header">
+              <div>
+                <div class="vps-name">VPS Produção SP</div>
+                <div class="vps-host">192.168.2.20 · Ubuntu 22.04</div>
+              </div>
+              <span class="status-badge degraded">Atenção</span>
+            </div>
+            <div class="gauge-grid">
+              <div class="gauge-item">
+                <div class="gauge-header">
+                  <span class="gauge-name">CPU</span>
+                  <span class="gauge-value crit">93%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill crit" style="width:93%"></div></div>
+              </div>
+              <div class="gauge-item">
+                <div class="gauge-header">
+                  <span class="gauge-name">Memória</span>
+                  <span class="gauge-value warn">87%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill warn" style="width:87%"></div></div>
+              </div>
+              <div class="gauge-item">
+                <div class="gauge-header">
+                  <span class="gauge-name">Disco</span>
+                  <span class="gauge-value ok">71%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill ok" style="width:71%"></div></div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:8px;font-weight:600;">Containers</div>
+            <div class="containers-list">
+              <div class="container-row"><div class="container-dot running"></div><span class="container-name">mautic_app</span><span class="container-uptime">5d</span></div>
+              <div class="container-row"><div class="container-dot stopped"></div><span class="container-name">mautic_worker</span><span class="container-uptime" style="color:var(--color-critical)">Parado</span></div>
+              <div class="container-row"><div class="container-dot running"></div><span class="container-name">mautic_db</span><span class="container-uptime">5d</span></div>
+            </div>
+          </div>
+
+          <!-- VPS 3 -->
+          <div class="vps-card">
+            <div class="vps-header">
+              <div>
+                <div class="vps-name">VPS Staging</div>
+                <div class="vps-host">192.168.3.30 · Ubuntu 22.04</div>
+              </div>
+              <span class="status-badge ok">Online</span>
+            </div>
+            <div class="gauge-grid">
+              <div class="gauge-item">
+                <div class="gauge-header">
+                  <span class="gauge-name">CPU</span>
+                  <span class="gauge-value ok">18%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill ok" style="width:18%"></div></div>
+              </div>
+              <div class="gauge-item">
+                <div class="gauge-header">
+                  <span class="gauge-name">Memória</span>
+                  <span class="gauge-value ok">41%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill ok" style="width:41%"></div></div>
+              </div>
+              <div class="gauge-item">
+                <div class="gauge-header">
+                  <span class="gauge-name">Disco</span>
+                  <span class="gauge-value ok">29%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill ok" style="width:29%"></div></div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:8px;font-weight:600;">Containers</div>
+            <div class="containers-list">
+              <div class="container-row"><div class="container-dot running"></div><span class="container-name">mautic_app</span><span class="container-uptime">2d</span></div>
+              <div class="container-row"><div class="container-dot running"></div><span class="container-name">mautic_db</span><span class="container-uptime">2d</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logs de erro recentes -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Logs de Serviços — Padrões de Erro Detectados</div>
+            <button class="btn btn-secondary" style="font-size:12px;padding:5px 12px;">Filtrar</button>
+          </div>
+          <div>
+            <div class="log-entry">
+              <span class="log-time">14:28</span>
+              <span class="severity-chip critical" style="font-size:10px;padding:1px 6px;">CRIT</span>
+              <span class="log-container">mautic_worker</span>
+              <span class="log-msg">PHP Fatal error: Allowed memory size of 268435456 bytes exhausted in /var/www/html/app/bundles/EmailBundle/...</span>
+            </div>
+            <div class="log-entry">
+              <span class="log-time">13:50</span>
+              <span class="severity-chip warning" style="font-size:10px;padding:1px 6px;">WARN</span>
+              <span class="log-container">mautic_app</span>
+              <span class="log-msg">Too many connections: max_connections limit reached on db host</span>
+            </div>
+            <div class="log-entry">
+              <span class="log-time">11:22</span>
+              <span class="severity-chip warning" style="font-size:10px;padding:1px 6px;">WARN</span>
+              <span class="log-container">mautic_app</span>
+              <span class="log-msg">SMTP Error: Connection refused to sendpost SMTP relay on port 587</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PAGE: ALERTAS ──────────────────────────────────────────── -->
+      <div class="page" id="page-alerts">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Histórico de Alertas</div>
+            <div class="page-subtitle">3 alertas ativos · Últimas 72 horas</div>
+          </div>
+          <button class="btn btn-secondary">Exportar</button>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Alertas Ativos &amp; Recentes</div>
+            <div style="display:flex;gap:8px;">
+              <span class="severity-chip critical">2 críticos</span>
+              <span class="severity-chip warning">1 atenção</span>
+            </div>
+          </div>
+          <table class="alerts-table">
+            <thead>
+              <tr>
+                <th>Severidade</th>
+                <th>Instância</th>
+                <th>Tipo</th>
+                <th>Mensagem</th>
+                <th>Horário</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="severity-chip critical">Crítico</span></td>
+                <td>Produção SP</td>
+                <td>email_delta</td>
+                <td>Delta email: Mautic=1004 vs Sendpost=932 (7.2% &gt; 5%)</td>
+                <td>14:32</td>
+                <td><button class="ack-btn">ACK</button></td>
+              </tr>
+              <tr>
+                <td><span class="severity-chip critical">Crítico</span></td>
+                <td>Produção SP</td>
+                <td>php_fatal</td>
+                <td>[mautic_worker] PHP Fatal error: Allowed memory size exhausted</td>
+                <td>14:28</td>
+                <td><button class="ack-btn">ACK</button></td>
+              </tr>
+              <tr>
+                <td><span class="severity-chip warning">Atenção</span></td>
+                <td>Produção BR</td>
+                <td>high_cpu</td>
+                <td>CPU elevada: 81% (threshold: 80%)</td>
+                <td>12:15</td>
+                <td><button class="ack-btn">ACK</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── PAGE: INSTANCES ─────────────────────────────────────────── -->
+      <div class="page" id="page-instances">
+        <div class="page-header">
+          <div><div class="page-title">Instâncias Mautic</div><div class="page-subtitle">3 instâncias configuradas</div></div>
+          <button class="btn btn-primary">+ Nova Instância</button>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Instâncias Configuradas</div></div>
+          <table class="alerts-table">
+            <thead>
+              <tr><th>Nome</th><th>URL</th><th>Empresas</th><th>Status</th><th>SSH</th><th>DB</th><th>Ações</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Produção BR</strong></td><td style="color:var(--color-text-muted);font-size:12px;">mautic1.spacecrm.online</td><td>4</td><td><span class="status-badge ok">Online</span></td><td><span style="color:var(--color-accent);">✓</span></td><td><span style="color:var(--color-accent);">✓</span></td><td><button class="ack-btn">Editar</button></td></tr>
+              <tr><td><strong>Produção SP</strong></td><td style="color:var(--color-text-muted);font-size:12px;">mautic2.spacecrm.online</td><td>3</td><td><span class="status-badge degraded">Degradado</span></td><td><span style="color:var(--color-accent);">✓</span></td><td><span style="color:var(--color-accent);">✓</span></td><td><button class="ack-btn">Editar</button></td></tr>
+              <tr><td><strong>Staging</strong></td><td style="color:var(--color-text-muted);font-size:12px;">mautic-stg.spacecrm.online</td><td>2</td><td><span class="status-badge ok">Online</span></td><td><span style="color:var(--color-accent);">✓</span></td><td><span style="color:var(--color-accent);">✓</span></td><td><button class="ack-btn">Editar</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── PAGE: GATEWAYS ─────────────────────────────────────────── -->
+      <div class="page" id="page-gateways">
+        <div class="page-header">
+          <div><div class="page-title">Gateways de Envio</div><div class="page-subtitle">Sendpost · Avant SMS</div></div>
+        </div>
+        <div class="section-grid">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📧 Sendpost — Email Gateway</div>
+              <span class="status-badge ok">Operacional</span>
+            </div>
+            <div class="card-body">
+              <div class="gw-stats">
+                <div class="gw-stat"><div class="gw-stat-value" style="color:var(--color-primary);">2.841</div><div class="gw-stat-label">Enviados hoje</div></div>
+                <div class="gw-stat"><div class="gw-stat-value" style="color:var(--color-accent);">2.790</div><div class="gw-stat-label">Entregues</div></div>
+                <div class="gw-stat"><div class="gw-stat-value" style="color:var(--color-warning);">38</div><div class="gw-stat-label">Bounces</div></div>
+                <div class="gw-stat"><div class="gw-stat-value" style="color:var(--color-critical);">13</div><div class="gw-stat-label">Spam</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📱 Avant SMS — SMS Gateway</div>
+              <span class="status-badge ok">Operacional</span>
+            </div>
+            <div class="card-body">
+              <div class="gw-stats">
+                <div class="gw-stat"><div class="gw-stat-value" style="color:var(--color-primary);">1.203</div><div class="gw-stat-label">Enviados hoje</div></div>
+                <div class="gw-stat"><div class="gw-stat-value" style="color:var(--color-accent);">1.197</div><div class="gw-stat-label">Entregues</div></div>
+                <div class="gw-stat"><div class="gw-stat-value" style="color:var(--color-critical);">6</div><div class="gw-stat-label">Falhos</div></div>
+                <div class="gw-stat"><div class="gw-stat-value" style="color:var(--color-accent);">4.820</div><div class="gw-stat-label">Saldo créditos</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PAGE: USERS ─────────────────────────────────────────────── -->
+      <div class="page" id="page-users">
+        <div class="page-header">
+          <div><div class="page-title">Usuários</div><div class="page-subtitle">3 usuários ativos</div></div>
+          <button class="btn btn-primary">+ Novo Usuário</button>
+        </div>
+        <div class="card">
+          <table class="alerts-table">
+            <thead><tr><th>Nome</th><th>Email</th><th>Papel</th><th>Alert Email</th><th>Alert SMS</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Ricardo Faria</strong></td><td>ricardo@spacecrm.online</td><td><span class="severity-chip info">admin</span></td><td>✓</td><td>✓</td><td><span class="status-badge ok">Ativo</span></td></tr>
+              <tr><td><strong>Ana Costa</strong></td><td>ana@spacecrm.online</td><td><span class="severity-chip warning">operador</span></td><td>✓</td><td>—</td><td><span class="status-badge ok">Ativo</span></td></tr>
+              <tr><td><strong>Carlos Lima</strong></td><td>carlos@spacecrm.online</td><td><span class="severity-chip warning">operador</span></td><td>✓</td><td>✓</td><td><span class="status-badge ok">Ativo</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── PAGE: SETTINGS ──────────────────────────────────────────── -->
+      <div class="page" id="page-settings">
+        <div class="page-header"><div><div class="page-title">Configurações</div><div class="page-subtitle">Thresholds, alertas e preferências</div></div></div>
+        <div class="section-grid">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Thresholds de Alerta — VPS</div></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:14px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">CPU Warning</span><strong>80%</strong></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">CPU Critical</span><strong>95%</strong></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">Memória Warning</span><strong>85%</strong></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">Disco Critical</span><strong>90%</strong></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Thresholds — Delta Alerts</div></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:14px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">Delta Email máximo</span><strong>5%</strong></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">Delta SMS máximo</span><strong>5%</strong></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">Latência API máxima</span><strong>3.000ms</strong></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">Cooldown de alertas</span><strong>30 min</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- FLOATING THEME BUTTON -->
+<button class="float-theme-btn" onclick="toggleTheme()" title="Alternar tema">
+  <span id="float-icon">☀️</span>
+</button>
+
+<script>
+// ─── THEME ─────────────────────────────────────────────────────────────
+const root = document.documentElement;
+
+function getStoredTheme() {
+  return localStorage.getItem('spacecrm-theme');
+}
+
+function getSystemTheme() {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function applyTheme(theme) {
+  root.setAttribute('data-theme', theme);
+  localStorage.setItem('spacecrm-theme', theme);
+  const isDark = theme === 'dark';
+  document.getElementById('theme-icon').textContent = isDark ? '☀️' : '🌙';
+  document.getElementById('theme-label').textContent = isDark ? 'Light' : 'Dark';
+  document.getElementById('float-icon').textContent = isDark ? '☀️' : '🌙';
+}
+
+function toggleTheme() {
+  const current = root.getAttribute('data-theme');
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+
+// Inicializa tema: preferência salva > sistema
+const savedTheme = getStoredTheme();
+applyTheme(savedTheme || getSystemTheme());
+
+// Escuta mudança de preferência do sistema
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+  if (!getStoredTheme()) applyTheme(e.matches ? 'dark' : 'light');
+});
+
+// ─── NAV ───────────────────────────────────────────────────────────────
+const NAV_TABS = {
+  dashboard:  { title: 'Dashboard',          tabs: [] },
+  instances:  { title: 'Instâncias Mautic',  tabs: ['Visão Geral', 'Configurações', 'Histórico'] },
+  gateways:   { title: 'Gateways de Envio',  tabs: ['Sendpost', 'Avant SMS', 'Delta Alerts'] },
+  vps:        { title: 'VPS & Logs',         tabs: ['Recursos', 'Containers', 'Logs de Erros'] },
+  alerts:     { title: 'Alertas',            tabs: ['Ativos', 'Histórico', 'Regras'] },
+  users:      { title: 'Usuários',           tabs: ['Lista', 'Permissões'] },
+  settings:   { title: 'Configurações',      tabs: ['Thresholds', 'Geral', 'Notificações'] },
+};
+
+function showPage(pageId, navEl) {
+  // Esconde todas as páginas
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  // Ativa a página selecionada
+  const page = document.getElementById('page-' + pageId);
+  if (page) page.classList.add('active');
+
+  // Atualiza nav ativa
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+
+  // Atualiza topnav
+  const cfg = NAV_TABS[pageId];
+  if (cfg) {
+    document.getElementById('topnav-title').textContent = cfg.title;
+    const tabsEl = document.getElementById('topnav-tabs');
+    tabsEl.innerHTML = cfg.tabs.map((tab, i) =>
+      `<button class="tab-btn ${i === 0 ? 'active' : ''}" onclick="switchTab(this)">${tab}</button>`
+    ).join('');
+  }
+}
+
+function switchTab(el) {
+  el.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>

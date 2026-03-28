@@ -1,0 +1,69 @@
+name: mautic-monitor
+
+services:
+  db:
+    image: timescale/timescaledb-ha:pg16
+    container_name: monitor_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TZ: ${TZ}
+    volumes:
+      - db_data:/home/postgres/pgdata/data
+    # Sem porta exposta externamente em produção
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: monitor_backend
+    restart: always
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      APP_ENV: production
+      APP_RELOAD: "false"
+      APP_WORKERS: "2"
+      DOCS_ENABLED: "false"
+      LOG_FORMAT: json
+      TZ: ${TZ}
+    volumes:
+      - ssh_keys:/app/ssh_keys:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    # EasyPanel expõe o backend via proxy reverso interno
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner
+    container_name: monitor_frontend
+    restart: always
+    environment:
+      NEXT_PUBLIC_API_URL: https://${EASYPANEL_DOMAIN}
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME}
+      NEXT_PUBLIC_APP_ENV: production
+      TZ: ${TZ}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    # EasyPanel aponta monitor.spacecrm.online → porta 3000 com SSL automático
+
+volumes:
+  db_data:
+  ssh_keys:
