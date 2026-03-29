@@ -104,9 +104,7 @@ export const PAGE_TABS = {
     { key: "rules",    label: "Regras" },
   ],
   reports: [
-    { key: "visualizar",    label: "Visualizar" },
-    { key: "recentes",      label: "Recentes" },
-    { key: "agendamentos",  label: "Agendamentos" },
+    { key: "envios", label: "Envios por Empresa" },
   ],
 } as const;
 

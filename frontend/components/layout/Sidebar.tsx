@@ -79,12 +79,12 @@ function NavItem({
         <span className="flex-1 truncate">{item.label}</span>
       </Link>
 
-      {/* Sub-itens estáticos — sempre visíveis */}
-      {item.tabs && (
+      {/* Sub-itens estáticos — visíveis somente quando a rota pai está ativa */}
+      {active && item.tabs && (
         <SidebarSubItems href={item.href} subItems={item.tabs} onClick={onClick} />
       )}
-      {/* Sub-itens dinâmicos (ex: Dashboard com instâncias) — sempre visíveis */}
-      {item.DynamicSubItems && (
+      {/* Sub-itens dinâmicos (ex: Dashboard) — visíveis somente quando ativo */}
+      {active && item.DynamicSubItems && (
         <item.DynamicSubItems onClick={onClick} />
       )}
     </div>
