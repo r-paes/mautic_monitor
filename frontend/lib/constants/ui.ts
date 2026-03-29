@@ -36,6 +36,7 @@ export const MESSAGES = {
     add: "Adicionar",
     edit: "Editar",
     refresh: "Atualizar",
+    newInstance: "Nova Instância",
     generate: "Gerar Relatório",
     send: "Enviar Relatório",
     preview: "Visualizar",
@@ -80,9 +81,34 @@ export const MESSAGES = {
   },
 } as const;
 
+/** Tabs por página */
+export const PAGE_TABS = {
+  instances: [
+    { key: "overview", label: "Visão Geral" },
+    { key: "config",   label: "Configurações" },
+    { key: "history",  label: "Histórico" },
+  ],
+  gateways: [
+    { key: "sendpost", label: "Sendpost" },
+    { key: "avant",    label: "Avant SMS" },
+    { key: "delta",    label: "Delta Alerts" },
+  ],
+  vps: [
+    { key: "resources",   label: "Recursos" },
+    { key: "containers",  label: "Containers" },
+    { key: "logs",        label: "Logs de Erros" },
+  ],
+  alerts: [
+    { key: "active",   label: "Ativos" },
+    { key: "history",  label: "Histórico" },
+    { key: "rules",    label: "Regras" },
+  ],
+} as const;
+
 /** Rótulos de seções da sidebar */
 export const NAV_LABELS = {
   monitoring: "Monitoramento",
+  reports_section: "Relatórios",
   system: "Sistema",
   dashboard: "Dashboard",
   instances: "Instâncias",

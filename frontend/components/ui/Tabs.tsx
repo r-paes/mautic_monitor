@@ -28,10 +28,10 @@ export function Tabs({ tabs, active, onChange, variant = "page" }: TabsProps) {
               key={tab.key}
               onClick={() => onChange(tab.key)}
               className={clsx(
-                "px-3 py-1 rounded-md text-xs font-semibold transition-colors",
+                "px-3.5 py-1.5 rounded-[var(--radius-sm)] text-sm whitespace-nowrap transition-colors",
                 isActive
-                  ? "bg-[var(--color-primary)] text-white"
-                  : "text-[var(--color-sidebar-muted)] hover:text-[var(--color-sidebar-text)]"
+                  ? "bg-[var(--color-nav-active)] text-[var(--color-primary)] font-semibold"
+                  : "text-[var(--color-sidebar-muted)] font-medium hover:bg-[var(--color-nav-active)] hover:text-[var(--color-sidebar-text)]"
               )}
             >
               {tab.label}

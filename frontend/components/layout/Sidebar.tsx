@@ -26,7 +26,10 @@ const NAV_MONITORING = [
   { href: "/gateways",   label: NAV_LABELS.gateways,   Icon: Radio },
   { href: "/vps",        label: NAV_LABELS.vps,        Icon: Monitor },
   { href: "/alerts",     label: NAV_LABELS.alerts,     Icon: Bell },
-  { href: "/reports",    label: NAV_LABELS.reports,    Icon: FileText },
+];
+
+const NAV_REPORTS = [
+  { href: "/reports", label: NAV_LABELS.reports, Icon: FileText },
 ];
 
 const NAV_SYSTEM = [
@@ -121,6 +124,15 @@ export function Sidebar() {
           {NAV_MONITORING.map(({ href, label, Icon }) => (
             <NavItem key={href} href={href} label={label} Icon={Icon} onClick={close} />
           ))}
+
+          <div className="pt-4 pb-1">
+            <p className="px-3 mb-2 text-[10px] font-semibold tracking-widest uppercase text-[var(--color-sidebar-muted)]">
+              {NAV_LABELS.reports_section}
+            </p>
+            {NAV_REPORTS.map(({ href, label, Icon }) => (
+              <NavItem key={href} href={href} label={label} Icon={Icon} onClick={close} />
+            ))}
+          </div>
         </nav>
 
         {/* Nav sistema */}

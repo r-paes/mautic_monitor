@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { RefreshCw } from "lucide-react";
-import { subDays, startOfDay } from "date-fns";
-import { format } from "date-fns";
+import { startOfDay, format } from "date-fns";
 import { Topnav } from "@/components/layout/Topnav";
 import { Tabs } from "@/components/ui/Tabs";
 import { Button } from "@/components/ui/Button";
@@ -31,7 +30,7 @@ export default function DashboardPage() {
   };
 
   const { data: dashboard, isLoading: loadingDashboard, refetch } = useDashboard(params);
-  const { data: instances, isLoading: loadingInstances } = useInstances();
+  const { data: instances } = useInstances();
 
   function handleRefresh() {
     setRefreshKey((k) => k + 1);
@@ -51,8 +50,8 @@ export default function DashboardPage() {
       <DateRangePicker value={dateRange} onChange={setDateRange} />
       <Button
         variant="secondary"
-        size="sm"
-        icon={<RefreshCw size={13} />}
+        size="md"
+        icon={<RefreshCw size={14} />}
         onClick={handleRefresh}
         loading={loadingDashboard}
       >
@@ -83,8 +82,8 @@ export default function DashboardPage() {
         tabs={topnavTabs}
       />
 
-      {/* Compensar altura do topnav com tabs */}
-      <div className="px-4 md:px-6 py-5" style={{ paddingTop: "calc(var(--topnav-height) + 36px + 20px)" }}>
+      {/* O layout já compensa var(--topnav-height); só adiciona padding interno */}
+      <div className="px-4 md:px-6 py-5">
         {loadingDashboard && !dashboard ? (
           <PageSpinner />
         ) : !dashboard ? (
