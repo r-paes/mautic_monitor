@@ -21,12 +21,15 @@ import { NAV_LABELS, PAGE_TABS } from "@/lib/constants/ui";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useSidebar } from "@/lib/hooks/useSidebar";
 import { SidebarSubItems } from "@/components/layout/SidebarSubItems";
+import { DashboardSubItems } from "@/components/layout/DashboardSubItems";
 
 interface NavItemDef {
   href: string;
   label: string;
   Icon: React.ElementType;
   tabs?: readonly { key: string; label: string }[];
+  /** Substitui `tabs` quando os sub-itens são dinâmicos (ex: Dashboard) */
+  DynamicSubItems?: React.ComponentType<{ onClick?: () => void }>;
 }
 
 const NAV_ALERTS_SECTION: NavItemDef[] = [
@@ -35,7 +38,7 @@ const NAV_ALERTS_SECTION: NavItemDef[] = [
 ];
 
 const NAV_MONITORING: NavItemDef[] = [
-  { href: "/dashboard",  label: NAV_LABELS.dashboard,  Icon: LayoutDashboard },
+  { href: "/dashboard",  label: NAV_LABELS.dashboard,  Icon: LayoutDashboard, DynamicSubItems: DashboardSubItems },
   { href: "/instances",  label: NAV_LABELS.instances,  Icon: Server,  tabs: PAGE_TABS.instances },
   { href: "/gateways",   label: NAV_LABELS.gateways,   Icon: Radio,   tabs: PAGE_TABS.gateways },
   { href: "/vps",        label: NAV_LABELS.vps,        Icon: Monitor, tabs: PAGE_TABS.vps },
@@ -76,9 +79,13 @@ function NavItem({
         <span className="flex-1 truncate">{item.label}</span>
       </Link>
 
-      {/* Sub-itens: visíveis em todas as telas quando a rota pai está ativa */}
-      {active && item.tabs && (
+      {/* Sub-itens estáticos — sempre visíveis */}
+      {item.tabs && (
         <SidebarSubItems href={item.href} subItems={item.tabs} onClick={onClick} />
+      )}
+      {/* Sub-itens dinâmicos (ex: Dashboard com instâncias) — sempre visíveis */}
+      {item.DynamicSubItems && (
+        <item.DynamicSubItems onClick={onClick} />
       )}
     </div>
   );
