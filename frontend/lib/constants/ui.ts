@@ -106,6 +106,15 @@ export const PAGE_TABS = {
   reports: [
     { key: "envios", label: "Envios por Empresa" },
   ],
+  users: [
+    { key: "list",        label: "Lista" },
+    { key: "permissions", label: "Permissões" },
+  ],
+  settings: [
+    { key: "thresholds",    label: "Thresholds" },
+    { key: "general",       label: "Geral" },
+    { key: "notifications", label: "Notificações" },
+  ],
 } as const;
 
 /** Rótulos de seções da sidebar */
