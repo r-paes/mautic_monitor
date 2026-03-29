@@ -131,18 +131,18 @@ export function Sidebar() {
 
         {/* Nav principal */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
-          {/* MONITORAMENTO */}
+          {/* ALERTAS E NOTIFICAÇÕES — primeira seção */}
           <div className="space-y-0.5">
-            <SectionLabel label={NAV_LABELS.monitoring} />
-            {NAV_MONITORING.map(({ href, label, Icon }) => (
+            <SectionLabel label={NAV_LABELS.alerts_section} />
+            {NAV_ALERTS.map(({ href, label, Icon }) => (
               <NavItem key={href} href={href} label={label} Icon={Icon} onClick={close} />
             ))}
           </div>
 
-          {/* ALERTAS E NOTIFICAÇÕES */}
+          {/* MONITORAMENTO */}
           <div className="space-y-0.5">
-            <SectionLabel label={NAV_LABELS.alerts_section} />
-            {NAV_ALERTS.map(({ href, label, Icon }) => (
+            <SectionLabel label={NAV_LABELS.monitoring} />
+            {NAV_MONITORING.map(({ href, label, Icon }) => (
               <NavItem key={href} href={href} label={label} Icon={Icon} onClick={close} />
             ))}
           </div>
