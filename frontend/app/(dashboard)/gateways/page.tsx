@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { startOfDay, format } from "date-fns";
 import { Topnav } from "@/components/layout/Topnav";
@@ -10,6 +10,7 @@ import { DateRangePicker, type DateRange } from "@/components/ui/DateRangePicker
 import { PageSpinner } from "@/components/ui/Spinner";
 import { SendpostCards, AvantCards, DeltaAlertCards } from "@/components/dashboard/gateways/GatewayStatCards";
 import { useGatewayMetrics } from "@/lib/hooks/useMetrics";
+import { useTabParam } from "@/lib/hooks/useTabParam";
 import { MESSAGES, PAGE_TABS } from "@/lib/constants/ui";
 
 const DEFAULT_RANGE: DateRange = {
@@ -17,9 +18,8 @@ const DEFAULT_RANGE: DateRange = {
   end: new Date(),
 };
 
-export default function GatewaysPage() {
-  const [activeTab, setActiveTab] = useState("sendpost");
-  const [dateRange, setDateRange] = useState<DateRange>(DEFAULT_RANGE);
+function GatewaysContent({ dateRange, setDateRange }: { dateRange: DateRange; setDateRange: (r: DateRange) => void }) {
+  const [activeTab, setTab] = useTabParam("sendpost");
 
   const params = {
     start: format(dateRange.start, "yyyy-MM-dd'T'HH:mm:ss"),
@@ -32,7 +32,7 @@ export default function GatewaysPage() {
     <Tabs
       tabs={PAGE_TABS.gateways as unknown as { key: string; label: string }[]}
       active={activeTab}
-      onChange={setActiveTab}
+      onChange={setTab}
       variant="topnav"
     />
   );
@@ -54,29 +54,36 @@ export default function GatewaysPage() {
 
   return (
     <>
-      <Topnav
-        title="Gateways de Envio"
-        tabs={topnavTabs}
-        actions={topnavActions}
-      />
+      <Topnav title="Gateways de Envio" tabs={topnavTabs} actions={topnavActions} />
 
       <div className="px-4 md:px-6 py-5">
         {isLoading && !metrics ? (
           <PageSpinner />
         ) : (
           <>
-            {activeTab === "sendpost" && (
-              <SendpostCards metrics={metrics ?? []} />
-            )}
-            {activeTab === "avant" && (
-              <AvantCards metrics={metrics ?? []} />
-            )}
-            {activeTab === "delta" && (
-              <DeltaAlertCards metrics={metrics ?? []} />
-            )}
+            {activeTab === "sendpost" && <SendpostCards metrics={metrics ?? []} />}
+            {activeTab === "avant"    && <AvantCards    metrics={metrics ?? []} />}
+            {activeTab === "delta"    && <DeltaAlertCards metrics={metrics ?? []} />}
           </>
         )}
       </div>
     </>
+  );
+}
+
+export default function GatewaysPage() {
+  const [dateRange, setDateRange] = useState<DateRange>(DEFAULT_RANGE);
+
+  return (
+    <Suspense
+      fallback={
+        <>
+          <Topnav title="Gateways de Envio" />
+          <div className="px-4 md:px-6 py-5"><PageSpinner /></div>
+        </>
+      }
+    >
+      <GatewaysContent dateRange={dateRange} setDateRange={setDateRange} />
+    </Suspense>
   );
 }

@@ -11,67 +11,76 @@ import {
   Bell,
   BellRing,
   FileText,
-  CalendarClock,
   Users,
   Settings,
   LogOut,
   X,
 } from "lucide-react";
 import { APP_LOGO_PATH, APP_NAME } from "@/lib/constants/app";
-import { NAV_LABELS } from "@/lib/constants/ui";
+import { NAV_LABELS, PAGE_TABS } from "@/lib/constants/ui";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useSidebar } from "@/lib/hooks/useSidebar";
+import { SidebarSubItems } from "@/components/layout/SidebarSubItems";
 
-const NAV_MONITORING = [
+interface NavItemDef {
+  href: string;
+  label: string;
+  Icon: React.ElementType;
+  tabs?: readonly { key: string; label: string }[];
+}
+
+const NAV_ALERTS_SECTION: NavItemDef[] = [
+  { href: "/alerts",        label: NAV_LABELS.alerts,        Icon: Bell,    tabs: PAGE_TABS.alerts },
+  { href: "/notifications", label: NAV_LABELS.notifications, Icon: BellRing },
+];
+
+const NAV_MONITORING: NavItemDef[] = [
   { href: "/dashboard",  label: NAV_LABELS.dashboard,  Icon: LayoutDashboard },
-  { href: "/instances",  label: NAV_LABELS.instances,  Icon: Server },
-  { href: "/gateways",   label: NAV_LABELS.gateways,   Icon: Radio },
-  { href: "/vps",        label: NAV_LABELS.vps,        Icon: Monitor },
+  { href: "/instances",  label: NAV_LABELS.instances,  Icon: Server,  tabs: PAGE_TABS.instances },
+  { href: "/gateways",   label: NAV_LABELS.gateways,   Icon: Radio,   tabs: PAGE_TABS.gateways },
+  { href: "/vps",        label: NAV_LABELS.vps,        Icon: Monitor, tabs: PAGE_TABS.vps },
 ];
 
-const NAV_ALERTS = [
-  { href: "/alerts",         label: NAV_LABELS.alerts,         Icon: Bell },
-  { href: "/notifications",  label: NAV_LABELS.notifications,  Icon: BellRing },
+const NAV_REPORTS: NavItemDef[] = [
+  { href: "/reports", label: NAV_LABELS.reports, Icon: FileText, tabs: PAGE_TABS.reports },
 ];
 
-const NAV_REPORTS = [
-  { href: "/reports",                label: NAV_LABELS.reports_recentes,     Icon: FileText },
-  { href: "/reports/agendamentos",   label: NAV_LABELS.reports_agendamentos, Icon: CalendarClock },
-];
-
-const NAV_SYSTEM = [
+const NAV_SYSTEM: NavItemDef[] = [
   { href: "/users",    label: NAV_LABELS.users,    Icon: Users },
   { href: "/settings", label: NAV_LABELS.settings, Icon: Settings },
 ];
 
 function NavItem({
-  href,
-  label,
-  Icon,
+  item,
   onClick,
 }: {
-  href: string;
-  label: string;
-  Icon: React.ElementType;
+  item: NavItemDef;
   onClick?: () => void;
 }) {
   const pathname = usePathname();
-  const active = pathname === href || pathname.startsWith(href + "/");
+  const active = pathname === item.href || pathname.startsWith(item.href + "/");
 
   return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className={clsx(
-        "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-        active
-          ? "bg-[var(--color-nav-active)] text-[var(--color-sidebar-text)]"
-          : "text-[var(--color-sidebar-muted)] hover:bg-[var(--color-nav-active)] hover:text-[var(--color-sidebar-text)]"
+    <div>
+      <Link
+        href={item.href}
+        onClick={onClick}
+        className={clsx(
+          "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+          active
+            ? "bg-[var(--color-nav-active)] text-[var(--color-sidebar-text)]"
+            : "text-[var(--color-sidebar-muted)] hover:bg-[var(--color-nav-active)] hover:text-[var(--color-sidebar-text)]"
+        )}
+      >
+        <item.Icon size={16} strokeWidth={1.75} className="shrink-0" />
+        <span className="flex-1 truncate">{item.label}</span>
+      </Link>
+
+      {/* Sub-itens: visíveis em todas as telas quando a rota pai está ativa */}
+      {active && item.tabs && (
+        <SidebarSubItems href={item.href} subItems={item.tabs} onClick={onClick} />
       )}
-    >
-      <Icon size={16} strokeWidth={1.75} className="shrink-0" />
-      <span className="flex-1 truncate">{label}</span>
-    </Link>
+    </div>
   );
 }
 
@@ -80,6 +89,16 @@ function SectionLabel({ label }: { label: string }) {
     <p className="px-3 mb-2 text-[10px] font-semibold tracking-widest uppercase text-[var(--color-sidebar-muted)]">
       {label}
     </p>
+  );
+}
+
+function NavSection({ items, onClick }: { items: NavItemDef[]; onClick?: () => void }) {
+  return (
+    <div className="space-y-0.5">
+      {items.map((item) => (
+        <NavItem key={item.href} item={item} onClick={onClick} />
+      ))}
+    </div>
   );
 }
 
@@ -116,11 +135,7 @@ export function Sidebar() {
       >
         {/* Logo + fechar (mobile) */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-[var(--color-nav-border)]">
-          <img
-            src={APP_LOGO_PATH}
-            alt={APP_NAME}
-            className="h-8 w-auto object-contain"
-          />
+          <img src={APP_LOGO_PATH} alt={APP_NAME} className="h-8 w-auto object-contain" />
           <button
             onClick={close}
             className="md:hidden p-1 rounded-md text-[var(--color-sidebar-muted)] hover:text-[var(--color-sidebar-text)]"
@@ -131,36 +146,25 @@ export function Sidebar() {
 
         {/* Nav principal */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
-          {/* ALERTAS E NOTIFICAÇÕES — primeira seção */}
-          <div className="space-y-0.5">
+          <div>
             <SectionLabel label={NAV_LABELS.alerts_section} />
-            {NAV_ALERTS.map(({ href, label, Icon }) => (
-              <NavItem key={href} href={href} label={label} Icon={Icon} onClick={close} />
-            ))}
+            <NavSection items={NAV_ALERTS_SECTION} onClick={close} />
           </div>
-
-          {/* MONITORAMENTO */}
-          <div className="space-y-0.5">
+          <div>
             <SectionLabel label={NAV_LABELS.monitoring} />
-            {NAV_MONITORING.map(({ href, label, Icon }) => (
-              <NavItem key={href} href={href} label={label} Icon={Icon} onClick={close} />
-            ))}
+            <NavSection items={NAV_MONITORING} onClick={close} />
           </div>
-
-          {/* RELATÓRIOS */}
-          <div className="space-y-0.5">
+          <div>
             <SectionLabel label={NAV_LABELS.reports_section} />
-            {NAV_REPORTS.map(({ href, label, Icon }) => (
-              <NavItem key={href} href={href} label={label} Icon={Icon} onClick={close} />
-            ))}
+            <NavSection items={NAV_REPORTS} onClick={close} />
           </div>
         </nav>
 
         {/* Nav sistema */}
         <div className="px-3 pb-2 border-t border-[var(--color-nav-border)] pt-3 space-y-0.5">
           <SectionLabel label={NAV_LABELS.system} />
-          {NAV_SYSTEM.map(({ href, label, Icon }) => (
-            <NavItem key={href} href={href} label={label} Icon={Icon} onClick={close} />
+          {NAV_SYSTEM.map((item) => (
+            <NavItem key={item.href} item={item} onClick={close} />
           ))}
           <button
             onClick={() => { close(); logout(); }}

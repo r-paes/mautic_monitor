@@ -7,7 +7,7 @@ import { useSidebar } from "@/lib/hooks/useSidebar";
 interface TopnavProps {
   title: string;
   subtitle?: string;
-  /** Tabs inline — aparecem na mesma linha do título, no centro */
+  /** Tabs inline — visíveis apenas em desktop (md+). Mobile usa sub-itens da sidebar. */
   tabs?: React.ReactNode;
   /** Ações à direita (filtros, botões) */
   actions?: React.ReactNode;
@@ -49,15 +49,14 @@ export function Topnav({ title, subtitle, tabs, actions }: TopnavProps) {
           )}
         </div>
 
-        {/* Tabs inline — ocupa o espaço central, scrollável em mobile */}
-        {tabs && (
-          <div className="flex-1 flex items-center overflow-x-auto min-w-0 scrollbar-none px-2">
-            {tabs}
-          </div>
-        )}
-
-        {/* Espaço vazio quando não há tabs */}
-        {!tabs && <div className="flex-1" />}
+        {/* Tabs inline — visíveis apenas em desktop; mobile usa sidebar sub-itens */}
+        <div className="flex-1 flex items-center min-w-0">
+          {tabs && (
+            <div className="hidden md:flex items-center gap-1 px-2">
+              {tabs}
+            </div>
+          )}
+        </div>
 
         {/* Ações (filtros, botões) */}
         {actions && (
