@@ -18,7 +18,7 @@ import { MESSAGES, PAGE_TABS } from "@/lib/constants/ui";
 import type { ReportConfig } from "@/lib/api/reports";
 
 function ReportsContent() {
-  const [activeTab, setTab] = useTabParam("envios");
+  const [activeTab, setTab] = useTabParam("visualizar");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ReportConfig | null>(null);
 
@@ -39,7 +39,7 @@ function ReportsContent() {
     />
   );
 
-  const topnavActions = activeTab === "agendamentos" ? (
+  const topnavActions = activeTab === "agendamento" ? (
     <Button
       variant="primary"
       size="md"
@@ -52,40 +52,80 @@ function ReportsContent() {
 
   return (
     <>
-      <Topnav title="Relatórios" tabs={topnavTabs} actions={topnavActions} />
+      <Topnav title="Envios por Empresa" tabs={topnavTabs} actions={topnavActions} />
 
       <div className="px-4 md:px-6 py-5">
-        {/* Envios por Empresa — histórico de relatórios gerados */}
-        {activeTab === "envios" && (
-          loadingConfigs ? (
-            <PageSpinner />
-          ) : (
+        {/* Visualizar — gerar e visualizar relatórios */}
+        {activeTab === "visualizar" && (
+          loadingConfigs ? <PageSpinner /> : (
             <div className="space-y-4">
               <Card padding="none">
                 <div className="px-5 py-4 border-b border-[var(--color-border)]">
                   <CardHeader
-                    title="Histórico de Envios"
-                    subtitle="Relatórios gerados por empresa e instância"
+                    title="Visualizar Relatório"
+                    subtitle="Selecione uma configuração para gerar e visualizar o relatório"
                   />
                 </div>
-                <ReportHistoryTable
-                  configs={configs ?? []}
-                  instanceNames={instanceNames}
-                />
+                <div className="px-5 py-6">
+                  {(configs?.length ?? 0) === 0 ? (
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                      {MESSAGES.emptyStates.reportConfigs}
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                      {configs!.map((cfg) => (
+                        <div
+                          key={cfg.id}
+                          className="p-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] space-y-2"
+                        >
+                          <p className="text-sm font-semibold text-[var(--color-text)]">
+                            {cfg.company_name}
+                          </p>
+                          <p className="text-xs text-[var(--color-text-muted)]">
+                            {instanceNames[cfg.instance_id] ?? cfg.instance_id}
+                          </p>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            className="w-full"
+                          >
+                            {MESSAGES.buttons.generate}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </Card>
             </div>
           )
         )}
 
-        {/* Agendamentos — configurações de relatório */}
-        {activeTab === "agendamentos" && (
-          loadingConfigs ? (
-            <PageSpinner />
-          ) : (
+        {/* Recentes — histórico de relatórios gerados */}
+        {activeTab === "recentes" && (
+          loadingConfigs ? <PageSpinner /> : (
             <Card padding="none">
               <div className="px-5 py-4 border-b border-[var(--color-border)]">
                 <CardHeader
-                  title="Configurações de Relatório"
+                  title="Relatórios Recentes"
+                  subtitle="Histórico de relatórios gerados por empresa e instância"
+                />
+              </div>
+              <ReportHistoryTable
+                configs={configs ?? []}
+                instanceNames={instanceNames}
+              />
+            </Card>
+          )
+        )}
+
+        {/* Agendamento — configurações de envio */}
+        {activeTab === "agendamento" && (
+          loadingConfigs ? <PageSpinner /> : (
+            <Card padding="none">
+              <div className="px-5 py-4 border-b border-[var(--color-border)]">
+                <CardHeader
+                  title="Configurações de Agendamento"
                   subtitle={`${configs?.length ?? 0} configuração${(configs?.length ?? 0) !== 1 ? "s" : ""} cadastrada${(configs?.length ?? 0) !== 1 ? "s" : ""}`}
                   actions={
                     <Button
@@ -124,7 +164,7 @@ export default function ReportsPage() {
     <Suspense
       fallback={
         <>
-          <Topnav title="Relatórios" />
+          <Topnav title="Envios por Empresa" />
           <div className="px-4 md:px-6 py-5"><PageSpinner /></div>
         </>
       }

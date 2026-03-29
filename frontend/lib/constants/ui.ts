@@ -104,7 +104,9 @@ export const PAGE_TABS = {
     { key: "rules",    label: "Regras" },
   ],
   reports: [
-    { key: "envios", label: "Envios por Empresa" },
+    { key: "visualizar",   label: "Visualizar" },
+    { key: "recentes",     label: "Recentes" },
+    { key: "agendamento",  label: "Agendamento" },
   ],
   users: [
     { key: "list",        label: "Lista" },
@@ -129,8 +131,7 @@ export const NAV_LABELS = {
   vps: "VPS & Logs",
   alerts: "Alertas",
   notifications: "Notificações",
-  reports_recentes: "Recentes",
-  reports_agendamentos: "Agendamentos",
+  reports: "Envios por Empresa",
   users: "Usuários",
   settings: "Configurações",
   logout: "Sair",
