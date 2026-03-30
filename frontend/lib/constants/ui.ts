@@ -89,8 +89,8 @@ export const PAGE_TABS = {
     { key: "history",  label: "Histórico" },
   ],
   gateways: [
-    { key: "sendpost", label: "Sendpost" },
-    { key: "avant",    label: "Avant SMS" },
+    { key: "sendpost", label: "Email (Sendpost)" },
+    { key: "avant",    label: "SMS (Avant)" },
     { key: "delta",    label: "Delta Alerts" },
   ],
   vps: [

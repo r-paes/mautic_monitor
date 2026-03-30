@@ -142,7 +142,7 @@ export function Sidebar() {
       >
         {/* Logo + fechar (mobile) */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-[var(--color-nav-border)]">
-          <img src={APP_LOGO_PATH} alt={APP_NAME} className="h-8 w-auto object-contain" />
+          <img src={APP_LOGO_PATH} alt={APP_NAME} className="h-6 w-auto object-contain" />
           <button
             onClick={close}
             className="md:hidden p-1 rounded-md text-[var(--color-sidebar-muted)] hover:text-[var(--color-sidebar-text)]"
