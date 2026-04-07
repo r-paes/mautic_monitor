@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { RefreshCw } from "lucide-react";
-import { startOfDay, format } from "date-fns";
+import { startOfDay } from "date-fns";
 import { Topnav } from "@/components/layout/Topnav";
 import { Tabs } from "@/components/ui/Tabs";
 import { Button } from "@/components/ui/Button";
@@ -25,8 +25,8 @@ export default function DashboardPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const params = {
-    start: format(dateRange.start, "yyyy-MM-dd'T'HH:mm:ss"),
-    end: format(dateRange.end, "yyyy-MM-dd'T'HH:mm:ss"),
+    start: dateRange.start.toISOString(),
+    end: dateRange.end.toISOString(),
   };
 
   const { data: dashboard, isLoading: loadingDashboard, refetch } = useDashboard(params);

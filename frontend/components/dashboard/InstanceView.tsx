@@ -7,7 +7,7 @@ import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
 import { VolumeChart } from "@/components/dashboard/VolumeChart";
 import { useInstanceMetrics } from "@/lib/hooks/useMetrics";
 import type { DateRange } from "@/components/ui/DateRangePicker";
-import { format } from "date-fns";
+
 
 function fmt(n: number | null | undefined) {
   if (n == null) return "—";
@@ -21,8 +21,8 @@ interface Props {
 
 export function InstanceView({ instanceId, dateRange }: Props) {
   const { data, isLoading } = useInstanceMetrics(instanceId, {
-    start: format(dateRange.start, "yyyy-MM-dd'T'HH:mm:ss"),
-    end: format(dateRange.end, "yyyy-MM-dd'T'HH:mm:ss"),
+    start: dateRange.start.toISOString(),
+    end: dateRange.end.toISOString(),
   });
 
   if (isLoading) return <PageSpinner />;

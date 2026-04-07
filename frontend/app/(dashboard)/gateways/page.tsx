@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { RefreshCw } from "lucide-react";
-import { startOfDay, format } from "date-fns";
+import { startOfDay } from "date-fns";
 import { Topnav } from "@/components/layout/Topnav";
 import { Tabs } from "@/components/ui/Tabs";
 import { Button } from "@/components/ui/Button";
@@ -24,8 +24,8 @@ function GatewaysContent({ dateRange, setDateRange }: { dateRange: DateRange; se
   const [activeTab, setTab] = useTabParam("sendpost");
 
   const params = {
-    start: format(dateRange.start, "yyyy-MM-dd'T'HH:mm:ss"),
-    end: format(dateRange.end, "yyyy-MM-dd'T'HH:mm:ss"),
+    start: dateRange.start.toISOString(),
+    end: dateRange.end.toISOString(),
   };
 
   const { data: metrics, isLoading, refetch } = useGatewayMetrics(params);

@@ -46,12 +46,10 @@ class SendpostCollector:
                 resp = await client.get("/account/subaccount/", params={"limit": 100, "offset": 0})
                 resp.raise_for_status()
                 data = resp.json()
-                # A API pode retornar lista direta ou wrapper
-                if isinstance(data, list):
-                    return data
-                if isinstance(data, dict) and "data" in data:
-                    return data["data"]
-                return data if isinstance(data, list) else []
+                raw_list = data if isinstance(data, list) else data.get("data", [])
+                # Sanitiza: extrai APENAS id e name — a API retorna apiKey,
+                # smtpAuths com senhas, etc. que nunca devem ser logados/armazenados.
+                return [{"id": s.get("id"), "name": s.get("name")} for s in raw_list]
         except httpx.HTTPStatusError as e:
             logger.error("Sendpost list_subaccounts erro %s: %s", e.response.status_code, e.response.text)
             return []

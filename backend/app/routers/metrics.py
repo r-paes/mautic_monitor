@@ -96,14 +96,14 @@ async def get_gateway_metrics(
 ):
     """Retorna métricas dos gateways de envio."""
     if start:
-        since = datetime.fromisoformat(start).replace(tzinfo=timezone.utc)
+        since = datetime.fromisoformat(start.replace("Z", "+00:00"))
     else:
         since = datetime.now(timezone.utc) - timedelta(hours=hours)
 
     query = select(GatewayMetric).where(GatewayMetric.time >= since)
 
     if end:
-        until = datetime.fromisoformat(end).replace(tzinfo=timezone.utc)
+        until = datetime.fromisoformat(end.replace("Z", "+00:00"))
         query = query.where(GatewayMetric.time <= until)
 
     if gateway_type:
