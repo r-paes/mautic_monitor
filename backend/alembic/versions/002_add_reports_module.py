@@ -37,9 +37,10 @@ def upgrade() -> None:
     op.create_index("ix_report_configs_instance_id", "report_configs", ["instance_id"])
 
     # ── report_history (hypertable em generated_at) ────────────────────────
+    # TimescaleDB exige que a coluna de particionamento esteja na PK
     op.create_table(
         "report_history",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True,
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False,
                   server_default=sa.text("uuid_generate_v4()")),
         sa.Column("report_config_id", postgresql.UUID(as_uuid=True),
                   sa.ForeignKey("report_configs.id", ondelete="CASCADE"), nullable=False),
@@ -58,6 +59,7 @@ def upgrade() -> None:
         sa.Column("sent_email", sa.Boolean(), server_default="false"),
         sa.Column("sent_sms", sa.Boolean(), server_default="false"),
         sa.Column("error_message", sa.Text(), nullable=True),
+        sa.PrimaryKeyConstraint("id", "generated_at"),
     )
 
     # Índices

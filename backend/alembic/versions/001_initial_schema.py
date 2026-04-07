@@ -97,9 +97,10 @@ def upgrade() -> None:
     op.create_index("ix_alerts_created_at", "alerts", ["created_at"])
 
     # ── health_metrics (hypertable) ────────────────────────────────────────
+    # TimescaleDB exige que a coluna de particionamento (time) esteja na PK
     op.create_table(
         "health_metrics",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True,
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False,
                   server_default=sa.text("uuid_generate_v4()")),
         sa.Column("time", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("instance_id", postgresql.UUID(as_uuid=True),
@@ -112,6 +113,7 @@ def upgrade() -> None:
         sa.Column("api_response_ms", sa.Integer(), nullable=True),
         sa.Column("db_response_ms", sa.Integer(), nullable=True),
         sa.Column("status", sa.String(20), server_default="ok"),
+        sa.PrimaryKeyConstraint("id", "time"),
     )
     op.create_index("ix_health_metrics_time", "health_metrics", ["time"])
     op.create_index("ix_health_metrics_time_instance",
@@ -124,7 +126,7 @@ def upgrade() -> None:
     # ── gateway_metrics (hypertable) ──────────────────────────────────────
     op.create_table(
         "gateway_metrics",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True,
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False,
                   server_default=sa.text("uuid_generate_v4()")),
         sa.Column("time", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("gateway_type", sa.String(30), nullable=False),
@@ -139,6 +141,7 @@ def upgrade() -> None:
         sa.Column("sms_delivered", sa.Integer(), nullable=True),
         sa.Column("sms_failed", sa.Integer(), nullable=True),
         sa.Column("balance_credits", sa.Float(), nullable=True),
+        sa.PrimaryKeyConstraint("id", "time"),
     )
     op.create_index("ix_gateway_metrics_time", "gateway_metrics", ["time"])
     op.create_index("ix_gateway_metrics_time_type",
@@ -151,7 +154,7 @@ def upgrade() -> None:
     # ── vps_metrics (hypertable) ───────────────────────────────────────────
     op.create_table(
         "vps_metrics",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True,
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False,
                   server_default=sa.text("uuid_generate_v4()")),
         sa.Column("time", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("instance_id", postgresql.UUID(as_uuid=True),
@@ -166,6 +169,7 @@ def upgrade() -> None:
         sa.Column("load_avg_1m", sa.Float(), nullable=True),
         sa.Column("load_avg_5m", sa.Float(), nullable=True),
         sa.Column("load_avg_15m", sa.Float(), nullable=True),
+        sa.PrimaryKeyConstraint("id", "time"),
     )
     op.create_index("ix_vps_metrics_time", "vps_metrics", ["time"])
     op.create_index("ix_vps_metrics_time_instance", "vps_metrics", ["time", "instance_id"])
@@ -177,7 +181,7 @@ def upgrade() -> None:
     # ── service_status (hypertable) ────────────────────────────────────────
     op.create_table(
         "service_status",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True,
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False,
                   server_default=sa.text("uuid_generate_v4()")),
         sa.Column("time", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("instance_id", postgresql.UUID(as_uuid=True),
@@ -187,6 +191,7 @@ def upgrade() -> None:
         sa.Column("uptime_seconds", sa.Integer(), nullable=True),
         sa.Column("restart_count", sa.Integer(), nullable=True),
         sa.Column("image", sa.String(300), nullable=True),
+        sa.PrimaryKeyConstraint("id", "time"),
     )
     op.create_index("ix_service_status_time", "service_status", ["time"])
     op.create_index("ix_service_status_time_instance",
