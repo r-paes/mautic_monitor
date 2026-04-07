@@ -69,6 +69,29 @@ export interface ContainerStatus {
   restart_count: number | null;
 }
 
+// Resposta do endpoint on-demand /gateways/sendpost/stats
+export interface SendpostSubAccountStats {
+  subaccount_id: number | null;
+  subaccount_name: string;
+  emails_sent: number;
+  emails_delivered: number;
+  emails_dropped: number;
+  emails_hard_bounced: number;
+  emails_soft_bounced: number;
+  emails_opened: number;
+  emails_clicked: number;
+  emails_unsubscribed: number;
+  emails_spam: number;
+  open_rate: number;
+  click_rate: number;
+}
+
+export interface SendpostStatsResponse {
+  period: { start: string; end: string };
+  subaccounts: SendpostSubAccountStats[];
+  totals: Omit<SendpostSubAccountStats, "subaccount_id" | "subaccount_name">;
+}
+
 export const metricsApi = {
   dashboard: (params?: { start?: string; end?: string }) =>
     apiClient.get<DashboardSummary>("/metrics/dashboard", { params }).then((r) => r.data),
@@ -78,6 +101,9 @@ export const metricsApi = {
 
   gateways: (params?: { start?: string; end?: string }) =>
     apiClient.get<GatewayMetric[]>("/metrics/gateways", { params }).then((r) => r.data),
+
+  sendpostStats: (params: { start: string; end: string }) =>
+    apiClient.get<SendpostStatsResponse>("/gateways/sendpost/stats", { params }).then((r) => r.data),
 
   emailTimeseries: (params?: { instance_id?: string; hours?: number }) =>
     apiClient.get<{ time: string; count: number; type: "email" | "sms" }[]>(

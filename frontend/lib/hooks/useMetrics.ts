@@ -27,6 +27,14 @@ export function useGatewayMetrics(params?: { start?: string; end?: string }) {
   });
 }
 
+export function useSendpostStats(params: { start: string; end: string }) {
+  return useQuery({
+    queryKey: ["sendpost-stats", params],
+    queryFn: () => metricsApi.sendpostStats(params),
+    staleTime: 60_000, // 1 min — evita re-fetch excessivo à API Sendpost
+  });
+}
+
 export function useEmailTimeseries(params?: { instance_id?: string; hours?: number }) {
   return useQuery({
     queryKey: ["timeseries-emails", params],

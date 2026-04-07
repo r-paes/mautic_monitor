@@ -225,3 +225,69 @@ async def collect_gateways_now(
 
     await db.commit()
     return results
+
+
+# ─── Stats On-Demand (Sendpost) ──────────────────────────────────────────────
+
+@router.get("/sendpost/stats")
+async def get_sendpost_stats(
+    start: str,
+    end: str,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """
+    Consulta a API Sendpost on-demand para o período selecionado.
+    Retorna stats por sub-account diretamente da Sendpost (não do banco local).
+    """
+    from app.collectors.sendpost import SendpostCollector
+    from app.utils.gateway_settings import get_gateway_setting
+    from app.config import settings
+
+    sendpost_key = await get_gateway_setting(db, "sendpost_api_key", settings.sendpost_api_key)
+    if not sendpost_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Account API Key do Sendpost não configurada",
+        )
+
+    collector = SendpostCollector(account_api_key=sendpost_key)
+
+    # Lista sub-accounts
+    subaccounts = await collector.list_subaccounts()
+
+    # Parseia datas — frontend envia ISO com Z
+    from_date = start.replace("Z", "+00:00").split("T")[0]  # YYYY-MM-DD
+    to_date = end.replace("Z", "+00:00").split("T")[0]
+
+    results = []
+    for sub in subaccounts:
+        sub_id = sub.get("id")
+        sub_name = sub.get("name", f"Sub-{sub_id}")
+
+        raw = await collector.get_subaccount_stats_by_date(sub_id, from_date, to_date)
+        if raw is None:
+            stats = collector._empty_stats()
+        else:
+            stats = collector._parse_stats(raw)
+
+        results.append({
+            "subaccount_id": sub_id,
+            "subaccount_name": sub_name,
+            **stats,
+        })
+
+    # Totais consolidados
+    totals = collector._empty_stats()
+    for r in results:
+        for key in totals:
+            if r.get(key) is not None and totals[key] is not None:
+                totals[key] = (totals[key] or 0) + r[key]
+            elif r.get(key) is not None:
+                totals[key] = r[key]
+
+    return {
+        "period": {"start": from_date, "end": to_date},
+        "subaccounts": results,
+        "totals": totals,
+    }

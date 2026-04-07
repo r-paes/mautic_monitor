@@ -2,9 +2,11 @@
 
 import { Mail, CheckCircle, XCircle, AlertTriangle, MessageSquare, CreditCard } from "lucide-react";
 import { StatCard } from "@/components/ui/Card";
+import { PageSpinner } from "@/components/ui/Spinner";
 import { MESSAGES } from "@/lib/constants/ui";
 import { useAvantStats } from "@/lib/hooks/useGatewayConfig";
-import type { GatewayMetric } from "@/lib/api/metrics";
+import { useSendpostStats } from "@/lib/hooks/useMetrics";
+import type { GatewayMetric, SendpostSubAccountStats } from "@/lib/api/metrics";
 
 function fmt(n: number | null | undefined) {
   if (n == null) return "—";
@@ -16,83 +18,20 @@ function deliveryRate(sent: number | null, delivered: number | null) {
   return `${((delivered / sent) * 100).toFixed(1)}% entrega`;
 }
 
-// ─── Sendpost (email) ────────────────────────────────────────────────────────
+// ─── Sendpost (email) — dados on-demand da API Sendpost ─────────────────────
 
 interface SendpostCardsProps {
-  metrics: GatewayMetric[];
+  params: { start: string; end: string };
 }
 
-interface SubAccountRow {
-  name: string;
-  sent: number;
-  delivered: number;
-  dropped: number;
-  hardBounced: number;
-  softBounced: number;
-  opened: number;
-  clicked: number;
-  unsubscribed: number;
-  spam: number;
-}
+export function SendpostCards({ params }: SendpostCardsProps) {
+  const { data, isLoading, error } = useSendpostStats(params);
 
-function aggregateBySubAccount(metrics: GatewayMetric[]): SubAccountRow[] {
-  const map = new Map<string, SubAccountRow>();
-  for (const m of metrics) {
-    // Ignora entries fantasma (sem sub-account e sem dados)
-    if (!m.subaccount_name && m.emails_sent == null) continue;
-
-    const key = m.subaccount_name ?? "Conta";
-    const existing = map.get(key);
-    if (existing) {
-      existing.sent += m.emails_sent ?? 0;
-      existing.delivered += m.emails_delivered ?? 0;
-      existing.dropped += m.emails_dropped ?? 0;
-      existing.hardBounced += m.emails_hard_bounced ?? 0;
-      existing.softBounced += m.emails_soft_bounced ?? 0;
-      existing.opened += m.emails_opened ?? 0;
-      existing.clicked += m.emails_clicked ?? 0;
-      existing.unsubscribed += m.emails_unsubscribed ?? 0;
-      existing.spam += m.emails_spam ?? 0;
-    } else {
-      map.set(key, {
-        name: key,
-        sent: m.emails_sent ?? 0,
-        delivered: m.emails_delivered ?? 0,
-        dropped: m.emails_dropped ?? 0,
-        hardBounced: m.emails_hard_bounced ?? 0,
-        softBounced: m.emails_soft_bounced ?? 0,
-        opened: m.emails_opened ?? 0,
-        clicked: m.emails_clicked ?? 0,
-        unsubscribed: m.emails_unsubscribed ?? 0,
-        spam: m.emails_spam ?? 0,
-      });
-    }
+  if (isLoading) {
+    return <PageSpinner />;
   }
-  return Array.from(map.values());
-}
 
-export function SendpostCards({ metrics }: SendpostCardsProps) {
-  const sendpost = metrics.filter((m) => m.gateway_type === "sendpost");
-  const rows = aggregateBySubAccount(sendpost);
-
-  const totals = rows.reduce(
-    (acc, r) => ({
-      sent: acc.sent + r.sent,
-      delivered: acc.delivered + r.delivered,
-      dropped: acc.dropped + r.dropped,
-      hardBounced: acc.hardBounced + r.hardBounced,
-      softBounced: acc.softBounced + r.softBounced,
-      opened: acc.opened + r.opened,
-      clicked: acc.clicked + r.clicked,
-      unsubscribed: acc.unsubscribed + r.unsubscribed,
-      spam: acc.spam + r.spam,
-    }),
-    { sent: 0, delivered: 0, dropped: 0, hardBounced: 0, softBounced: 0, opened: 0, clicked: 0, unsubscribed: 0, spam: 0 }
-  );
-
-  const totalBounces = totals.hardBounced + totals.softBounced;
-
-  if (rows.length === 0) {
+  if (error || !data || data.subaccounts.length === 0) {
     return (
       <p className="text-sm text-[var(--color-text-muted)] py-8 text-center">
         {MESSAGES.emptyStates.gateways}
@@ -100,20 +39,23 @@ export function SendpostCards({ metrics }: SendpostCardsProps) {
     );
   }
 
+  const totals = data.totals;
+  const totalBounces = (totals.emails_hard_bounced ?? 0) + (totals.emails_soft_bounced ?? 0);
+
   return (
     <div className="space-y-6">
       {/* Cards de totais consolidados */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           label="Emails Enviados"
-          value={fmt(totals.sent)}
-          delta={deliveryRate(totals.sent, totals.delivered) ?? undefined}
+          value={fmt(totals.emails_sent)}
+          delta={deliveryRate(totals.emails_sent, totals.emails_delivered) ?? undefined}
           deltaOk
           icon={<Mail size={18} />}
         />
         <StatCard
           label="Entregues"
-          value={fmt(totals.delivered)}
+          value={fmt(totals.emails_delivered)}
           icon={<CheckCircle size={18} />}
         />
         <StatCard
@@ -125,15 +67,15 @@ export function SendpostCards({ metrics }: SendpostCardsProps) {
         />
         <StatCard
           label="Spam"
-          value={fmt(totals.spam)}
-          deltaOk={totals.spam === 0}
-          delta={totals.spam > 0 ? "Atenção requerida" : "Sem ocorrências"}
+          value={fmt(totals.emails_spam)}
+          deltaOk={(totals.emails_spam ?? 0) === 0}
+          delta={(totals.emails_spam ?? 0) > 0 ? "Atenção requerida" : "Sem ocorrências"}
           icon={<AlertTriangle size={18} />}
         />
       </div>
 
-      {/* Tabela consolidada por sub-account */}
-      <SendpostSubAccountTable rows={rows} />
+      {/* Tabela por sub-account — dados diretos da API Sendpost */}
+      <SendpostSubAccountTable rows={data.subaccounts} />
     </div>
   );
 }
@@ -143,7 +85,7 @@ const SENDPOST_COLS = [
   "Soft Bounce", "Opened", "Clicked", "Unsubscribed", "Spam",
 ] as const;
 
-function SendpostSubAccountTable({ rows }: { rows: SubAccountRow[] }) {
+function SendpostSubAccountTable({ rows }: { rows: SendpostSubAccountStats[] }) {
   return (
     <div className="w-full overflow-x-auto rounded-[var(--radius-md)] border border-[var(--color-border)]">
       <table className="w-full text-sm">
@@ -165,24 +107,24 @@ function SendpostSubAccountTable({ rows }: { rows: SubAccountRow[] }) {
         <tbody>
           {rows.map((r) => (
             <tr
-              key={r.name}
+              key={r.subaccount_name}
               className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)] transition-colors"
             >
-              <td className="px-4 py-3 font-medium text-[var(--color-text)]">{r.name}</td>
-              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.sent)}</td>
-              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.delivered)}</td>
-              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.dropped)}</td>
+              <td className="px-4 py-3 font-medium text-[var(--color-text)]">{r.subaccount_name}</td>
+              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.emails_sent)}</td>
+              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.emails_delivered)}</td>
+              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.emails_dropped)}</td>
               <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
-                <span className={r.hardBounced > 0 ? "text-[var(--color-error)]" : ""}>{fmt(r.hardBounced)}</span>
+                <span className={r.emails_hard_bounced > 0 ? "text-[var(--color-error)]" : ""}>{fmt(r.emails_hard_bounced)}</span>
               </td>
               <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
-                <span className={r.softBounced > 0 ? "text-[var(--color-warning)]" : ""}>{fmt(r.softBounced)}</span>
+                <span className={r.emails_soft_bounced > 0 ? "text-[var(--color-warning)]" : ""}>{fmt(r.emails_soft_bounced)}</span>
               </td>
-              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.opened)}</td>
-              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.clicked)}</td>
-              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.unsubscribed)}</td>
+              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.emails_opened)}</td>
+              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.emails_clicked)}</td>
+              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.emails_unsubscribed)}</td>
               <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
-                <span className={r.spam > 0 ? "text-[var(--color-error)]" : ""}>{fmt(r.spam)}</span>
+                <span className={r.emails_spam > 0 ? "text-[var(--color-error)]" : ""}>{fmt(r.emails_spam)}</span>
               </td>
             </tr>
           ))}

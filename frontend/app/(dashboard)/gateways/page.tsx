@@ -78,7 +78,7 @@ function GatewaysContent() {
           <PageSpinner />
         ) : (
           <>
-            {activeTab === "sendpost" && <SendpostCards metrics={metrics ?? []} />}
+            {activeTab === "sendpost" && <SendpostCards params={params} />}
             {activeTab === "avant"    && <AvantCards    metrics={metrics ?? []} />}
             {activeTab === "delta"    && <DeltaAlertCards metrics={metrics ?? []} />}
           </>

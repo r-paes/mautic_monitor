@@ -95,6 +95,35 @@ class SendpostCollector:
             logger.error("Erro ao coletar stats Sendpost subaccount %s: %s", subaccount_id, e)
             return None
 
+    async def get_subaccount_stats_by_date(
+        self, subaccount_id: int, from_date: str, to_date: str
+    ) -> dict | None:
+        """
+        Coleta stats agregadas de uma sub-account para um período específico.
+        from_date/to_date no formato YYYY-MM-DD.
+        """
+        try:
+            async with httpx.AsyncClient(
+                base_url=self.base_url,
+                headers=self.headers,
+                timeout=self.timeout,
+            ) as client:
+                resp = await client.get(
+                    f"/account/subaccount/stat/{subaccount_id}/aggregate",
+                    params={"from": from_date, "to": to_date},
+                )
+                resp.raise_for_status()
+                return resp.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "Sendpost stats subaccount %s erro %s: %s",
+                subaccount_id, e.response.status_code, e.response.text,
+            )
+            return None
+        except Exception as e:
+            logger.error("Erro stats Sendpost subaccount %s: %s", subaccount_id, e)
+            return None
+
     async def get_account_stats(self, hours: int = 1) -> dict | None:
         """
         Coleta stats agregadas de toda a conta (fallback se não há sub-accounts).
