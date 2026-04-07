@@ -2,7 +2,7 @@
 
 import {
   Send, CheckCircle, XCircle, AlertTriangle, Ban,
-  Eye, MousePointerClick, UserMinus, ShieldAlert,
+  Eye, MousePointerClick, ShieldAlert,
   MessageSquare, CreditCard,
 } from "lucide-react";
 import { StatCard } from "@/components/ui/Card";
@@ -47,8 +47,8 @@ export function SendpostCards({ params }: SendpostCardsProps) {
 
   return (
     <div className="space-y-6">
-      {/* Cards — um por coluna da tabela */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-5 gap-4">
+      {/* Cards — 8 métricas principais */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           label="Processed"
           value={fmt(totals.emails_sent)}
@@ -95,12 +95,6 @@ export function SendpostCards({ params }: SendpostCardsProps) {
           delta={totals.emails_delivered ? `${((totals.emails_clicked / totals.emails_delivered) * 100).toFixed(1)}%` : undefined}
           deltaOk
           icon={<MousePointerClick size={18} />}
-        />
-        <StatCard
-          label="Unsubscribed"
-          value={fmt(totals.emails_unsubscribed)}
-          deltaOk={(totals.emails_unsubscribed ?? 0) === 0}
-          icon={<UserMinus size={18} />}
         />
         <StatCard
           label="Spam"
