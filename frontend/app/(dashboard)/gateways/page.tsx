@@ -15,13 +15,12 @@ import { useGatewayMetrics } from "@/lib/hooks/useMetrics";
 import { useTabParam } from "@/lib/hooks/useTabParam";
 import { MESSAGES, PAGE_TABS } from "@/lib/constants/ui";
 
-const DEFAULT_RANGE: DateRange = {
-  start: startOfDay(new Date()),
-  end: new Date(),
-};
-
-function GatewaysContent({ dateRange, setDateRange }: { dateRange: DateRange; setDateRange: (r: DateRange) => void }) {
+function GatewaysContent() {
   const [activeTab, setTab] = useTabParam("sendpost");
+  const [dateRange, setDateRange] = useState<DateRange>({
+    start: startOfDay(new Date()),
+    end: new Date(),
+  });
 
   const params = {
     start: dateRange.start.toISOString(),
@@ -90,8 +89,6 @@ function GatewaysContent({ dateRange, setDateRange }: { dateRange: DateRange; se
 }
 
 export default function GatewaysPage() {
-  const [dateRange, setDateRange] = useState<DateRange>(DEFAULT_RANGE);
-
   return (
     <Suspense
       fallback={
@@ -101,7 +98,7 @@ export default function GatewaysPage() {
         </>
       }
     >
-      <GatewaysContent dateRange={dateRange} setDateRange={setDateRange} />
+      <GatewaysContent />
     </Suspense>
   );
 }
