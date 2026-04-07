@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { DateRangePicker, type DateRange } from "@/components/ui/DateRangePicker";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { SendpostCards, AvantCards, DeltaAlertCards } from "@/components/dashboard/gateways/GatewayStatCards";
+import { GatewayCredentialsForm } from "@/components/dashboard/gateways/GatewayCredentialsForm";
+import { CostCenterManager } from "@/components/dashboard/gateways/CostCenterManager";
 import { useGatewayMetrics } from "@/lib/hooks/useMetrics";
 import { useTabParam } from "@/lib/hooks/useTabParam";
 import { MESSAGES, PAGE_TABS } from "@/lib/constants/ui";
@@ -28,6 +30,8 @@ function GatewaysContent({ dateRange, setDateRange }: { dateRange: DateRange; se
 
   const { data: metrics, isLoading, refetch } = useGatewayMetrics(params);
 
+  const isConfigTab = activeTab === "config";
+
   const topnavTabs = (
     <Tabs
       tabs={PAGE_TABS.gateways as unknown as { key: string; label: string }[]}
@@ -37,7 +41,7 @@ function GatewaysContent({ dateRange, setDateRange }: { dateRange: DateRange; se
     />
   );
 
-  const topnavActions = (
+  const topnavActions = !isConfigTab ? (
     <div className="flex items-center gap-2">
       <DateRangePicker value={dateRange} onChange={setDateRange} />
       <Button
@@ -50,14 +54,28 @@ function GatewaysContent({ dateRange, setDateRange }: { dateRange: DateRange; se
         <span className="hidden sm:inline">{MESSAGES.buttons.refresh}</span>
       </Button>
     </div>
-  );
+  ) : null;
 
   return (
     <>
-      <Topnav title="Gateways de Envio" tabs={topnavTabs} actions={topnavActions} />
+      <Topnav title="Gateways" tabs={topnavTabs} actions={topnavActions} />
 
       <div className="px-4 md:px-6 py-5">
-        {isLoading && !metrics ? (
+        {isConfigTab ? (
+          <div className="space-y-5 max-w-xl">
+            <GatewayCredentialsForm
+              gateway="sendpost"
+              title="Sendpost — Credenciais"
+              subtitle="API Key e e-mail remetente para envio de emails"
+            />
+            <GatewayCredentialsForm
+              gateway="avant"
+              title="Avant SMS — Credenciais"
+              subtitle="Token de autenticação e URL da API"
+            />
+            <CostCenterManager />
+          </div>
+        ) : isLoading && !metrics ? (
           <PageSpinner />
         ) : (
           <>
@@ -78,7 +96,7 @@ export default function GatewaysPage() {
     <Suspense
       fallback={
         <>
-          <Topnav title="Gateways de Envio" />
+          <Topnav title="Gateways" />
           <div className="px-4 md:px-6 py-5"><PageSpinner /></div>
         </>
       }

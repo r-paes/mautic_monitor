@@ -24,6 +24,7 @@ from app.models.users import User
 from app.models.vps_metrics import VpsMetric, ServiceStatus
 from app.alerts.email_alert import send_alert_email
 from app.alerts.sms_alert import send_alert_sms
+from app.utils.gateway_settings import get_gateway_setting
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +109,10 @@ async def _create_alert(
 
 async def _notify_users_email(db: AsyncSession, severity: str, alert_type: str, message: str):
     """Envia email para todos os usuários ativos com alert_email configurado."""
+    # Credenciais do banco (prioridade) com fallback para .env
+    api_key = await get_gateway_setting(db, "sendpost_api_key", settings.sendpost_api_key)
+    from_email = await get_gateway_setting(db, "sendpost_alert_from_email", settings.sendpost_alert_from_email)
+
     result = await db.execute(
         select(User).where(User.active == True, User.alert_email.isnot(None))
     )
@@ -119,11 +124,16 @@ async def _notify_users_email(db: AsyncSession, severity: str, alert_type: str, 
             severity=severity,
             alert_type=alert_type,
             message=message,
+            api_key=api_key,
+            from_email=from_email,
         )
 
 
 async def _notify_users_sms(db: AsyncSession, severity: str, alert_type: str, message: str):
     """Envia SMS para todos os usuários ativos com alert_phone configurado."""
+    # Credenciais do banco (prioridade) com fallback para .env
+    sms_token = await get_gateway_setting(db, "avant_sms_token", settings.avant_sms_token)
+
     result = await db.execute(
         select(User).where(User.active == True, User.alert_phone.isnot(None))
     )
@@ -134,6 +144,7 @@ async def _notify_users_sms(db: AsyncSession, severity: str, alert_type: str, me
             severity=severity,
             alert_type=alert_type,
             message=message,
+            token=sms_token,
         )
 
 

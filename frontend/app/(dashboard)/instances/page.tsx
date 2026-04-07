@@ -48,7 +48,7 @@ function InstancesContent() {
   return (
     <>
       <Topnav
-        title="Instâncias Mautic"
+        title="Instâncias"
         subtitle={subtitle}
         tabs={topnavTabs}
         actions={topnavActions}
@@ -99,7 +99,7 @@ export default function InstancesPage() {
     <Suspense
       fallback={
         <>
-          <Topnav title="Instâncias Mautic" />
+          <Topnav title="Instâncias" />
           <div className="px-4 md:px-6 py-5"><PageSpinner /></div>
         </>
       }

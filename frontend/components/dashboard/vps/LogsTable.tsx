@@ -123,7 +123,7 @@ export function LogsTable({ instanceId, instanceNames }: Props) {
       <div className="flex items-center gap-3">
         <Select
           value={level}
-          onChange={setLevel}
+          onChange={(e) => setLevel(e.target.value)}
           options={LEVEL_OPTIONS}
           className="w-48"
         />

@@ -1,5 +1,5 @@
 """
-mautic_db.py — Coleta de dados via conexão direta ao banco PostgreSQL do Mautic.
+mautic_postgres.py — Coleta de dados via conexão direta ao banco PostgreSQL do Mautic.
 
 Queries de leitura apenas. Fornece dados que a API REST não expõe:
 fila de emails, histórico detalhado, estatísticas brutas.

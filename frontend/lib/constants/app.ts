@@ -3,9 +3,9 @@
  * Todos os valores sensíveis à URL ou ambiente vêm de variáveis NEXT_PUBLIC_*.
  */
 
-export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "Space Monitor";
-export const APP_TAGLINE = "Painel de controle multi-instância Mautic CRM";
-export const APP_LOGO_PATH = "/logo.png";
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "SpaceCRM Monitor";
+export const APP_TAGLINE = "Painel de controle multi-instâncias Mautic";
+export const APP_LOGO_PATH = "logo-space.webp";
 
 export const APP_BASE_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";

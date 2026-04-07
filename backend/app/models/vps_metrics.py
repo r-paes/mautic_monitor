@@ -2,14 +2,30 @@
 vps_metrics.py — Métricas de recursos das VPS + status de containers + logs de serviços.
 """
 
+import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+
+
+class ContainerStatus(str, enum.Enum):
+    running = "running"
+    stopped = "stopped"
+    restarting = "restarting"
+    error = "error"
+    unknown = "unknown"
+
+
+class LogLevel(str, enum.Enum):
+    info = "info"
+    warning = "warning"
+    error = "error"
+    critical = "critical"
 
 
 class VpsMetric(Base):
@@ -74,8 +90,10 @@ class ServiceStatus(Base):
     )
     container_name: Mapped[str] = mapped_column(String(200), nullable=False)
 
-    # running | stopped | restarting | error | unknown
-    status: Mapped[str] = mapped_column(String(30), nullable=False)
+    status: Mapped[str] = mapped_column(
+        Enum(ContainerStatus, name="container_status", create_constraint=True, native_enum=True),
+        nullable=False,
+    )
     uptime_seconds: Mapped[int | None] = mapped_column(Integer)
     restart_count: Mapped[int | None] = mapped_column(Integer)
     image: Mapped[str | None] = mapped_column(String(300))
@@ -100,8 +118,10 @@ class ServiceLog(Base):
     )
     container_name: Mapped[str] = mapped_column(String(200), nullable=False)
 
-    # info | warning | error | critical
-    log_level: Mapped[str] = mapped_column(String(20), nullable=False)
+    log_level: Mapped[str] = mapped_column(
+        Enum(LogLevel, name="log_level", create_constraint=True, native_enum=True),
+        nullable=False,
+    )
     message: Mapped[str] = mapped_column(Text, nullable=False)
     pattern_matched: Mapped[str | None] = mapped_column(String(100))  # qual regra detectou
     captured_at: Mapped[datetime] = mapped_column(

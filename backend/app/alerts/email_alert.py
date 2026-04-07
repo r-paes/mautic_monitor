@@ -1,5 +1,7 @@
 """
 alerts/email_alert.py — Envio de alertas por email via Sendpost API.
+
+Auth: Header X-SubAccount-ApiKey
 """
 
 import logging
@@ -33,7 +35,7 @@ EMAIL_BODY_TEMPLATE = """
         <p style="color: #091628; font-size: 14px; margin: 0;">{message}</p>
       </div>
       <p style="color: #5a6a7e; font-size: 12px; margin: 24px 0 0 0;">
-        Space Monitor — monitor.spacecrm.online
+        Space Monitor — {domain}
       </p>
     </div>
   </div>
@@ -68,9 +70,14 @@ async def send_alert_email(
     severity: str,
     alert_type: str,
     message: str,
+    api_key: str | None = None,
+    from_email: str | None = None,
 ) -> bool:
     """Envia email de alerta via Sendpost API."""
     config = SEVERITY_CONFIG.get(severity, SEVERITY_CONFIG["info"])
+
+    sendpost_key = api_key or settings.sendpost_api_key
+    sendpost_from = from_email or settings.sendpost_alert_from_email
 
     subject = EMAIL_SUBJECT_TEMPLATE.format(
         severity_label=config["label"],
@@ -83,11 +90,12 @@ async def send_alert_email(
         header_color=config["color"],
         alert_type=alert_type,
         message=message,
+        domain=settings.easypanel_domain,
     )
 
     payload = {
         "from": {
-            "email": settings.sendpost_alert_from_email,
+            "email": sendpost_from,
             "name": settings.sendpost_alert_from_name,
         },
         "to": [{"email": to_email, "name": to_name}],
@@ -96,7 +104,7 @@ async def send_alert_email(
     }
 
     headers = {
-        "X-SubAccount-ApiKey": settings.sendpost_api_key,
+        "X-SubAccount-ApiKey": sendpost_key,
         "Content-Type": "application/json",
     }
 

@@ -1,5 +1,9 @@
 """
 alerts/sms_alert.py — Envio de alertas por SMS via Avant SMS API.
+
+Auth: Authorization: alpha {TOKEN}
+Endpoint: POST https://channel.solucoesdigitais.dev/sms/message/send
+
 Usado apenas para alertas CRITICAL.
 """
 
@@ -8,6 +12,7 @@ import logging
 import httpx
 
 from app.config import settings
+from app.collectors.avant_sms import AVANT_SEND_URL
 
 logger = logging.getLogger(__name__)
 
@@ -15,14 +20,13 @@ logger = logging.getLogger(__name__)
 SMS_MESSAGE_TEMPLATE = "[SpaceCRM] {severity}: {alert_type} — {message_short}"
 SMS_MAX_MESSAGE_LENGTH = 160
 
-AVANT_SEND_ENDPOINT = "/sms/send"
-
 
 async def send_alert_sms(
     to_phone: str,
     severity: str,
     alert_type: str,
     message: str,
+    token: str | None = None,
 ) -> bool:
     """Envia SMS de alerta via Avant SMS API."""
     severity_label = "CRITICO" if severity == "critical" else "ATENCAO"
@@ -37,24 +41,25 @@ async def send_alert_sms(
         message_short=message_short,
     )
 
+    sms_token = token or settings.avant_sms_token
+
     headers = {
-        "Authorization": f"Bearer {settings.avant_sms_token}",
+        "Authorization": f"alpha {sms_token}",
         "Content-Type": "application/json",
     }
 
     payload = {
-        "to": to_phone,
-        "from": settings.avant_sms_alert_from,
-        "message": sms_text,
+        "recipient": to_phone,
+        "message": {"text": sms_text},
+        "costCenterCode": settings.avant_sms_alert_from,
     }
 
     try:
         async with httpx.AsyncClient(
-            base_url=settings.avant_sms_api_base_url.rstrip("/"),
             headers=headers,
             timeout=settings.mautic_timeout_seconds,
         ) as client:
-            resp = await client.post(AVANT_SEND_ENDPOINT, json=payload)
+            resp = await client.post(AVANT_SEND_URL, json=payload)
             resp.raise_for_status()
             logger.info("SMS de alerta enviado para %s (%s)", to_phone, alert_type)
             return True

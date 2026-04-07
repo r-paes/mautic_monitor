@@ -92,6 +92,7 @@ export const PAGE_TABS = {
     { key: "sendpost", label: "Email (Sendpost)" },
     { key: "avant",    label: "SMS (Avant)" },
     { key: "delta",    label: "Delta Alerts" },
+    { key: "config",   label: "Configurações" },
   ],
   vps: [
     { key: "resources",   label: "Recursos" },
@@ -113,8 +114,8 @@ export const PAGE_TABS = {
     { key: "permissions", label: "Permissões" },
   ],
   settings: [
-    { key: "thresholds",    label: "Thresholds" },
     { key: "general",       label: "Geral" },
+    { key: "thresholds",    label: "Thresholds" },
     { key: "notifications", label: "Notificações" },
   ],
 } as const;

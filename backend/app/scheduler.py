@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.collectors.mautic_api import MauticAPICollector
-from app.collectors.mautic_db import MauticDBCollector
+from app.collectors.mautic_postgres import MauticDBCollector
 from app.collectors.sendpost import SendpostCollector
 from app.collectors.avant_sms import AvantSMSCollector
 from app.collectors.vps_ssh import VpsSSHCollector
@@ -33,6 +33,7 @@ from app.models.vps_metrics import VpsMetric, ServiceStatus, ServiceLog
 from app.models.reports import ReportConfig
 from app.alerts import engine as alert_engine
 from app.utils.crypto import decrypt_secret
+from app.utils.gateway_settings import get_gateway_setting
 from app.services.report_generator import generate_report, purge_old_reports
 from app.services.report_sender import dispatch_report
 
@@ -189,7 +190,9 @@ async def job_collect_gateways():
 
         # Sendpost
         try:
-            sendpost = SendpostCollector()
+            sendpost_key = await get_gateway_setting(db, "sendpost_api_key", settings.sendpost_api_key)
+            sendpost_from = await get_gateway_setting(db, "sendpost_alert_from_email", settings.sendpost_alert_from_email)
+            sendpost = SendpostCollector(api_key=sendpost_key, from_email=sendpost_from)
             data = await sendpost.collect()
             metric = GatewayMetric(time=now, gateway_type="sendpost", **data)
             db.add(metric)
@@ -200,8 +203,10 @@ async def job_collect_gateways():
 
         # Avant SMS
         try:
-            avant = AvantSMSCollector()
-            data = await avant.collect()
+            avant_token = await get_gateway_setting(db, "avant_sms_token", settings.avant_sms_token)
+            avant_base_url = await get_gateway_setting(db, "avant_sms_api_base_url", settings.avant_sms_api_base_url)
+            avant = AvantSMSCollector(token=avant_token, base_url=avant_base_url)
+            data = await avant.collect(db_session=db)
             metric = GatewayMetric(time=now, gateway_type="avant_sms", **data)
             db.add(metric)
 
@@ -259,15 +264,19 @@ async def job_collect_vps_ssh():
         now = datetime.now(timezone.utc)
 
         for instance in instances:
-            if not all([instance.ssh_host, instance.ssh_user, instance.ssh_key_path]):
+            has_key_in_db = bool(instance.ssh_private_key_enc)
+            has_legacy_key = bool(instance.ssh_key_path)
+            if not all([instance.ssh_host, instance.ssh_user]) or not (has_key_in_db or has_legacy_key):
                 logger.debug("Instância %s sem configuração SSH, pulando.", instance.name)
                 continue
             try:
+                private_key_pem = decrypt_secret(instance.ssh_private_key_enc) if has_key_in_db else None
                 collector = VpsSSHCollector(
                     host=instance.ssh_host,
                     port=instance.ssh_port,
                     username=instance.ssh_user,
-                    key_path=instance.ssh_key_path,
+                    private_key_pem=private_key_pem,
+                    key_path=instance.ssh_key_path if not has_key_in_db else None,
                 )
                 snapshot = await collector.collect()
 
@@ -357,7 +366,16 @@ async def job_generate_reports():
                 history = await generate_report(db=db, config=config, trigger="scheduled")
 
                 if history.status == "success":
-                    email_sent, sms_sent = await dispatch_report(config, history)
+                    # Credenciais do banco com fallback para .env
+                    sp_key = await get_gateway_setting(db, "sendpost_api_key", settings.sendpost_api_key)
+                    sp_from = await get_gateway_setting(db, "sendpost_alert_from_email", settings.sendpost_alert_from_email)
+                    av_token = await get_gateway_setting(db, "avant_sms_token", settings.avant_sms_token)
+                    email_sent, sms_sent = await dispatch_report(
+                        config, history,
+                        sendpost_api_key=sp_key,
+                        sendpost_from_email=sp_from,
+                        avant_token=av_token,
+                    )
                     history.sent_email = email_sent
                     history.sent_sms = sms_sent
                     await db.commit()

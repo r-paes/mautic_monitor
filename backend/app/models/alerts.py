@@ -2,14 +2,27 @@
 alerts.py — Modelo de alertas gerados pelo sistema.
 """
 
+import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+
+
+class AlertSeverity(str, enum.Enum):
+    info = "info"
+    warning = "warning"
+    critical = "critical"
+
+
+class NotificationChannel(str, enum.Enum):
+    email = "email"
+    sms = "sms"
+    both = "both"
 
 
 class Alert(Base):
@@ -24,18 +37,20 @@ class Alert(Base):
         UUID(as_uuid=True), ForeignKey("instances.id", ondelete="SET NULL"), nullable=True
     )
 
-    # info | warning | critical
-    severity: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    severity: Mapped[str] = mapped_column(
+        Enum(AlertSeverity, name="alert_severity", create_constraint=True, native_enum=True),
+        nullable=False, index=True,
+    )
 
-    # Tipo do alerta: instance_down | container_stopped | high_cpu | high_memory |
-    #                 high_disk | email_delta | sms_delta | zero_contacts |
-    #                 low_balance | php_fatal | oom | db_connection | smtp_error
+    # Tipo do alerta — string livre para permitir novos tipos sem migration
     type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
 
     message: Mapped[str] = mapped_column(Text, nullable=False)
 
-    # Canais notificados: email | sms | both
-    notified_via: Mapped[str | None] = mapped_column(String(20))
+    notified_via: Mapped[str | None] = mapped_column(
+        Enum(NotificationChannel, name="notification_channel", create_constraint=True, native_enum=True),
+        nullable=True,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True

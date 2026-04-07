@@ -42,3 +42,17 @@ export function useDeleteInstance() {
     onSuccess: () => qc.invalidateQueries({ queryKey: INSTANCES_KEY }),
   });
 }
+
+export function useGenerateSshKey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => instancesApi.generateSshKey(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: INSTANCES_KEY }),
+  });
+}
+
+export function useTestSsh() {
+  return useMutation({
+    mutationFn: (id: string) => instancesApi.testSsh(id),
+  });
+}

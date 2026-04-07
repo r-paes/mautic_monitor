@@ -27,12 +27,18 @@ SENDPOST_SUPPRESSION_ENDPOINT = "/subaccount/suppression"
 class SendpostCollector:
     """Coleta estatísticas de email via Sendpost REST API."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        api_key: str | None = None,
+        from_email: str | None = None,
+    ):
+        # Aceita credenciais via parâmetro (do banco) ou fallback para settings
         self.base_url = settings.sendpost_api_base_url.rstrip("/")
         self.headers = {
-            "X-SubAccount-ApiKey": settings.sendpost_api_key,
+            "X-SubAccount-ApiKey": api_key or settings.sendpost_api_key,
             "Content-Type": "application/json",
         }
+        self.from_email = from_email or settings.sendpost_alert_from_email
         self.timeout = settings.mautic_timeout_seconds
 
     @with_retry(exceptions=(httpx.HTTPError, httpx.TimeoutException))

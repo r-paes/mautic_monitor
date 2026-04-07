@@ -38,3 +38,6 @@ Thumbs.db
 
 # Preview
 preview/
+
+# Build artifacts
+*.tsbuildinfo

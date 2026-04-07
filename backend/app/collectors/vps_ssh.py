@@ -68,25 +68,47 @@ class VpsSnapshot:
 class VpsSSHCollector:
     """Coleta métricas e logs de uma VPS via SSH usando paramiko."""
 
-    def __init__(self, host: str, port: int, username: str, key_path: str):
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        username: str,
+        private_key_pem: Optional[str] = None,
+        key_path: Optional[str] = None,
+    ):
         self.host = host
         self.port = port
         self.username = username
-        self.key_path = key_path
+        self.private_key_pem = private_key_pem  # chave privada PEM (do banco)
+        self.key_path = key_path                 # legado: caminho no filesystem
 
     def _create_client(self) -> paramiko.SSHClient:
-        """Cria e conecta cliente SSH."""
+        """Cria e conecta cliente SSH — usa chave do banco ou de arquivo (fallback legado)."""
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(
-            hostname=self.host,
-            port=self.port,
-            username=self.username,
-            key_filename=self.key_path,
-            timeout=settings.mautic_timeout_seconds,
-            look_for_keys=False,
-            allow_agent=False,
-        )
+
+        if self.private_key_pem:
+            pkey = paramiko.RSAKey.from_private_key(StringIO(self.private_key_pem))
+            client.connect(
+                hostname=self.host,
+                port=self.port,
+                username=self.username,
+                pkey=pkey,
+                timeout=settings.mautic_timeout_seconds,
+                look_for_keys=False,
+                allow_agent=False,
+            )
+        else:
+            # Fallback para key_path (instâncias legado)
+            client.connect(
+                hostname=self.host,
+                port=self.port,
+                username=self.username,
+                key_filename=self.key_path,
+                timeout=settings.mautic_timeout_seconds,
+                look_for_keys=False,
+                allow_agent=False,
+            )
         return client
 
     def _exec(self, client: paramiko.SSHClient, command: str) -> str:

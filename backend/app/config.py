@@ -85,7 +85,7 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     # 📱 Avant SMS — Gateway de SMS
     # -------------------------------------------------------------------------
-    avant_sms_api_base_url: str = "https://api.solucoesdigitais.dev"
+    avant_sms_api_base_url: str = "https://channel.solucoesdigitais.dev/sms"
     avant_sms_token: str
     avant_sms_alert_from: str = "SpaceCRM"
 
@@ -137,7 +137,7 @@ class Settings(BaseSettings):
     # 🐳 Docker / EasyPanel
     # -------------------------------------------------------------------------
     compose_project_name: str = "mautic-monitor"
-    easypanel_domain: str = "your-domain.com"
+    easypanel_domain: str = "monitor.spacecrm.online"
     tz: str = "America/Sao_Paulo"
 
     # -------------------------------------------------------------------------

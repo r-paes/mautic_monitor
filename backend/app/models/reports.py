@@ -5,14 +5,27 @@ ReportConfig  — configuração de envio de relatório por empresa/instância.
 ReportHistory — histórico de execuções (TimescaleDB hypertable em 'generated_at').
 """
 
+import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+
+class ReportTrigger(str, enum.Enum):
+    scheduled = "scheduled"
+    manual = "manual"
+
+
+class ReportStatus(str, enum.Enum):
+    pending = "pending"
+    generating = "generating"
+    success = "success"
+    error = "error"
 
 
 class ReportConfig(Base):
@@ -98,9 +111,14 @@ class ReportHistory(Base):
     period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     # Contexto de execução
-    trigger: Mapped[str] = mapped_column(String(20), nullable=False)  # scheduled | manual
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
-    # pending | generating | success | error
+    trigger: Mapped[str] = mapped_column(
+        Enum(ReportTrigger, name="report_trigger", create_constraint=True, native_enum=True),
+        nullable=False,
+    )
+    status: Mapped[str] = mapped_column(
+        Enum(ReportStatus, name="report_status", create_constraint=True, native_enum=True),
+        nullable=False, default="pending",
+    )
 
     # Arquivo gerado
     file_path: Mapped[str | None] = mapped_column(String(500))   # path relativo em /app/reports

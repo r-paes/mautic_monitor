@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { authApi, type Me } from "@/lib/api/auth";
-import { setAccessToken, getAccessToken } from "@/lib/api/client";
+import { setAccessToken } from "@/lib/api/client";
 
 interface AuthState {
   user: Me | null;
@@ -19,24 +19,17 @@ export function useAuth() {
     error: null,
   });
 
-  // Inicializa sessão a partir do refresh_token salvo
+  // Inicializa sessão via refresh cookie (HTTP-only, enviado automaticamente)
   useEffect(() => {
-    const refreshToken = localStorage.getItem("refresh_token");
-    if (!refreshToken) {
-      setState({ user: null, loading: false, error: null });
-      return;
-    }
-
     authApi
-      .refresh(refreshToken)
-      .then(({ access_token, refresh_token }) => {
+      .refresh()
+      .then(({ access_token }) => {
         setAccessToken(access_token);
-        localStorage.setItem("refresh_token", refresh_token);
         return authApi.me();
       })
       .then((user) => setState({ user, loading: false, error: null }))
       .catch(() => {
-        localStorage.removeItem("refresh_token");
+        setAccessToken(null);
         setState({ user: null, loading: false, error: null });
       });
   }, []);
@@ -45,9 +38,8 @@ export function useAuth() {
     async (username: string, password: string) => {
       setState((s) => ({ ...s, loading: true, error: null }));
       try {
-        const tokens = await authApi.login({ username, password });
-        setAccessToken(tokens.access_token);
-        localStorage.setItem("refresh_token", tokens.refresh_token);
+        const { access_token } = await authApi.login({ username, password });
+        setAccessToken(access_token);
         const user = await authApi.me();
         setState({ user, loading: false, error: null });
         router.push("/dashboard");
@@ -58,9 +50,13 @@ export function useAuth() {
     [router]
   );
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // Ignora erro no logout — limpa sessão local de qualquer forma
+    }
     setAccessToken(null);
-    localStorage.removeItem("refresh_token");
     setState({ user: null, loading: false, error: null });
     router.push("/login");
   }, [router]);

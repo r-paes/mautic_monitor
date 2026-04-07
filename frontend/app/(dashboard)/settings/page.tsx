@@ -44,37 +44,6 @@ function SettingsContent() {
       <Topnav title="Configurações" tabs={topnavTabs} />
 
       <div className="px-4 md:px-6 py-5 space-y-4 max-w-2xl">
-        {activeTab === "thresholds" && (
-          <Card>
-            <CardHeader
-              title="Thresholds de Alerta"
-              subtitle="Limites para geração automática de alertas de severidade"
-            />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {DEFAULT_THRESHOLDS.map((t) => (
-                <div key={t.key}>
-                  <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1">
-                    {t.label}
-                  </label>
-                  <input
-                    type="number"
-                    className={inputCls}
-                    value={thresholds[t.key]}
-                    onChange={(e) =>
-                      setThresholds((prev) => ({ ...prev, [t.key]: e.target.value }))
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end mt-6">
-              <Button variant="primary" size="md">
-                {MESSAGES.buttons.save}
-              </Button>
-            </div>
-          </Card>
-        )}
-
         {activeTab === "general" && (
           <Card>
             <CardHeader
@@ -97,6 +66,37 @@ function SettingsContent() {
                 </label>
                 <input type="number" className={inputCls} defaultValue="60" />
               </div>
+            </div>
+            <div className="flex justify-end mt-6">
+              <Button variant="primary" size="md">
+                {MESSAGES.buttons.save}
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {activeTab === "thresholds" && (
+          <Card>
+            <CardHeader
+              title="Thresholds de Alerta"
+              subtitle="Limites para geração automática de alertas de severidade"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {DEFAULT_THRESHOLDS.map((t) => (
+                <div key={t.key}>
+                  <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1">
+                    {t.label}
+                  </label>
+                  <input
+                    type="number"
+                    className={inputCls}
+                    value={thresholds[t.key]}
+                    onChange={(e) =>
+                      setThresholds((prev) => ({ ...prev, [t.key]: e.target.value }))
+                    }
+                  />
+                </div>
+              ))}
             </div>
             <div className="flex justify-end mt-6">
               <Button variant="primary" size="md">

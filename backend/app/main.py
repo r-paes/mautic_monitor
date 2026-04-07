@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from app.config import settings
 from app.database import engine, Base
 from app.scheduler import create_scheduler
-from app.routers import auth, instances, metrics, vps, alerts, users, reports
+from app.routers import auth, instances, metrics, vps, alerts, users, reports, gateways, avant, webhooks
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Logging
@@ -83,6 +83,9 @@ app.include_router(vps.router, prefix=settings.api_v1_prefix)
 app.include_router(alerts.router, prefix=settings.api_v1_prefix)
 app.include_router(users.router, prefix=settings.api_v1_prefix)
 app.include_router(reports.router, prefix=settings.api_v1_prefix)
+app.include_router(gateways.router, prefix=settings.api_v1_prefix)
+app.include_router(avant.router, prefix=settings.api_v1_prefix)
+app.include_router(webhooks.router)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

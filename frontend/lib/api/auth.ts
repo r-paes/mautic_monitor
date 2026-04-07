@@ -5,9 +5,8 @@ export interface LoginPayload {
   password: string;
 }
 
-export interface AuthTokens {
+export interface TokenOut {
   access_token: string;
-  refresh_token: string;
   token_type: string;
 }
 
@@ -22,16 +21,20 @@ export interface Me {
 export const authApi = {
   login: (payload: LoginPayload) =>
     apiClient
-      .post<AuthTokens>("/auth/login", new URLSearchParams({
+      .post<TokenOut>("/auth/login", new URLSearchParams({
         username: payload.username,
         password: payload.password,
       }), { headers: { "Content-Type": "application/x-www-form-urlencoded" } })
       .then((r) => r.data),
 
-  refresh: (refreshToken: string) =>
+  /** Refresh token é enviado automaticamente via cookie HTTP-only */
+  refresh: () =>
     apiClient
-      .post<AuthTokens>("/auth/refresh", { refresh_token: refreshToken })
+      .post<TokenOut>("/auth/refresh")
       .then((r) => r.data),
+
+  logout: () =>
+    apiClient.post("/auth/logout"),
 
   me: () =>
     apiClient.get<Me>("/auth/me").then((r) => r.data),

@@ -266,7 +266,7 @@ export function InstanceFormModal({ open, onClose, instance }: Props) {
                   placeholder="db_user"
                 />
               </Field>
-              <Field label="Senha" className="sm:col-span-2">
+              <Field label="Senha">
                 <input
                   className={inputCls}
                   type="password"

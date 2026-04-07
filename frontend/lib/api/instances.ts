@@ -7,7 +7,20 @@ export interface Instance {
   api_user: string;
   db_host: string | null;
   ssh_host: string | null;
+  ssh_port: number;
+  ssh_user: string | null;
+  ssh_key_path: string | null;
+  ssh_public_key: string | null;
   active: boolean;
+}
+
+export interface SshKeyOut {
+  public_key: string;
+}
+
+export interface SshTestResult {
+  success: boolean;
+  message: string;
 }
 
 export interface InstanceCreate {
@@ -32,6 +45,10 @@ export interface InstanceUpdate {
   api_user?: string;
   api_password?: string;
   active?: boolean;
+  ssh_host?: string;
+  ssh_port?: number;
+  ssh_user?: string;
+  ssh_key_path?: string;
 }
 
 export const instancesApi = {
@@ -49,4 +66,10 @@ export const instancesApi = {
 
   remove: (id: string) =>
     apiClient.delete(`/instances/${id}`),
+
+  generateSshKey: (id: string) =>
+    apiClient.post<SshKeyOut>(`/instances/${id}/generate-ssh-key`).then((r) => r.data),
+
+  testSsh: (id: string) =>
+    apiClient.post<SshTestResult>(`/instances/${id}/test-ssh`).then((r) => r.data),
 };

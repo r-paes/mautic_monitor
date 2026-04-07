@@ -1,17 +1,18 @@
 """
 report_sender.py — Envio de relatórios por e-mail (Sendpost) e SMS (Avant).
 
+Credenciais são lidas do banco (gateway_configs) com fallback para .env.
 Cada função retorna True em caso de sucesso ou False em caso de falha,
 registrando o erro no logger para rastreabilidade sem lançar exceções.
 """
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 import httpx
 
 from app.config import settings
+from app.collectors.avant_sms import AVANT_SEND_URL
 from app.models.reports import ReportConfig, ReportHistory
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,8 @@ _HTTP_TIMEOUT = httpx.Timeout(30.0, connect=10.0)
 async def send_report_email(
     config: ReportConfig,
     history: ReportHistory,
+    api_key: str | None = None,
+    from_email: str | None = None,
 ) -> bool:
     """
     Envia o relatório HTML por e-mail via API Sendpost.
@@ -50,12 +53,15 @@ async def send_report_email(
         logger.error("Não foi possível ler arquivo %s: %s", history.file_path, e)
         return False
 
+    sendpost_key = api_key or settings.sendpost_api_key
+    sendpost_from = from_email or settings.sendpost_alert_from_email
+
     period_label = history.period_start.strftime("%d/%m/%Y")
     subject = f"Relatório Mautic — {config.company_name} — {period_label}"
 
     payload = {
         "from": {
-            "email": settings.sendpost_alert_from_email,
+            "email": sendpost_from,
             "name": settings.sendpost_alert_from_name,
         },
         "to": [{"email": config.report_email}],
@@ -69,7 +75,7 @@ async def send_report_email(
                 f"{settings.sendpost_api_base_url}/subaccount/email/",
                 json=payload,
                 headers={
-                    "X-SpPostMail-SubAccount-Api-Key": settings.sendpost_api_key,
+                    "X-SubAccount-ApiKey": sendpost_key,
                     "Content-Type": "application/json",
                 },
             )
@@ -101,6 +107,7 @@ async def send_report_email(
 async def send_report_sms(
     config: ReportConfig,
     history: ReportHistory,
+    token: str | None = None,
 ) -> bool:
     """
     Envia notificação SMS via API Avant informando que o relatório está disponível.
@@ -126,19 +133,23 @@ async def send_report_sms(
         f"Acesse o painel para ver o relatorio completo."
     )
 
+    sms_token = token or settings.avant_sms_token
+
     payload = {
-        "token": settings.avant_sms_token,
-        "numero": config.report_phone,
-        "mensagem": message,
-        "remetente": settings.avant_sms_alert_from,
+        "recipient": config.report_phone,
+        "message": {"text": message},
+        "costCenterCode": settings.avant_sms_alert_from,
     }
 
     try:
         async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
             response = await client.post(
-                f"{settings.avant_sms_api_base_url}/sms/enviar",
+                AVANT_SEND_URL,
                 json=payload,
-                headers={"Content-Type": "application/json"},
+                headers={
+                    "Authorization": f"alpha {sms_token}",
+                    "Content-Type": "application/json",
+                },
             )
             response.raise_for_status()
 
@@ -168,6 +179,9 @@ async def send_report_sms(
 async def dispatch_report(
     config: ReportConfig,
     history: ReportHistory,
+    sendpost_api_key: str | None = None,
+    sendpost_from_email: str | None = None,
+    avant_token: str | None = None,
 ) -> tuple[bool, bool]:
     """
     Envia relatório pelos canais configurados (email e/ou SMS).
@@ -179,9 +193,16 @@ async def dispatch_report(
     sms_sent = False
 
     if config.send_email:
-        email_sent = await send_report_email(config, history)
+        email_sent = await send_report_email(
+            config, history,
+            api_key=sendpost_api_key,
+            from_email=sendpost_from_email,
+        )
 
     if config.send_sms:
-        sms_sent = await send_report_sms(config, history)
+        sms_sent = await send_report_sms(
+            config, history,
+            token=avant_token,
+        )
 
     return email_sent, sms_sent

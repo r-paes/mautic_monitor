@@ -4,16 +4,12 @@ import { Mail, CheckCircle, XCircle, AlertTriangle, MessageSquare, CreditCard } 
 import { StatCard } from "@/components/ui/Card";
 import { Badge, statusVariant } from "@/components/ui/Badge";
 import { MESSAGES } from "@/lib/constants/ui";
+import { useAvantStats } from "@/lib/hooks/useGatewayConfig";
 import type { GatewayMetric } from "@/lib/api/metrics";
 
 function fmt(n: number | null | undefined) {
   if (n == null) return "—";
   return n.toLocaleString("pt-BR");
-}
-
-function fmtCredits(n: number | null | undefined) {
-  if (n == null) return "—";
-  return `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 }
 
 function deliveryRate(sent: number | null, delivered: number | null) {
@@ -104,19 +100,37 @@ interface AvantCardsProps {
 }
 
 export function AvantCards({ metrics }: AvantCardsProps) {
-  const avant = metrics.filter((m) => m.gateway_type === "avant");
+  const { data: avantStats, isLoading: statsLoading } = useAvantStats();
 
-  const totals = avant.reduce(
+  // Stat cards globais — dados do endpoint /gateways/avant/stats
+  const balance = avantStats?.balance ?? null;
+  const byClient = avantStats?.by_client ?? [];
+
+  const clientTotals = byClient.reduce(
+    (acc, c) => ({
+      sent: acc.sent + c.sms_sent,
+      delivered: acc.delivered + c.sms_delivered,
+      failed: acc.failed + c.sms_failed,
+    }),
+    { sent: 0, delivered: 0, failed: 0 }
+  );
+
+  // Fallback: se não há dados do endpoint de stats, usa métricas do GatewayMetric
+  const avant = metrics.filter((m) => m.gateway_type === "avant");
+  const metricTotals = avant.reduce(
     (acc, m) => ({
       sent: acc.sent + (m.sms_sent ?? 0),
       delivered: acc.delivered + (m.sms_delivered ?? 0),
       failed: acc.failed + (m.sms_failed ?? 0),
-      balance: acc.balance + (m.balance_credits ?? 0),
+      balance: m.balance_credits ?? acc.balance,
     }),
-    { sent: 0, delivered: 0, failed: 0, balance: 0 }
+    { sent: 0, delivered: 0, failed: 0, balance: null as number | null }
   );
 
-  if (avant.length === 0) {
+  const totals = byClient.length > 0 ? clientTotals : metricTotals;
+  const displayBalance = balance ?? metricTotals.balance;
+
+  if (avant.length === 0 && !statsLoading && byClient.length === 0) {
     return (
       <p className="text-sm text-[var(--color-text-muted)] py-8 text-center">
         {MESSAGES.emptyStates.gateways}
@@ -147,26 +161,84 @@ export function AvantCards({ metrics }: AvantCardsProps) {
           icon={<XCircle size={18} />}
         />
         <StatCard
-          label="Saldo (créditos)"
-          value={fmtCredits(totals.balance)}
-          deltaOk={totals.balance > 100}
-          delta={totals.balance <= 100 ? "Saldo baixo" : "Saldo ok"}
+          label="Saldo (creditos)"
+          value={fmt(displayBalance)}
+          deltaOk={displayBalance != null && displayBalance > 1000}
+          delta={
+            displayBalance == null
+              ? undefined
+              : displayBalance <= 1000
+              ? "Saldo baixo"
+              : "Saldo ok"
+          }
           icon={<CreditCard size={18} />}
         />
       </div>
 
-      <BreakdownTable
-        rows={avant.map((m) => ({
-          type: m.gateway_type,
-          status: m.status,
-          cols: [
-            { label: "Enviados",  value: fmt(m.sms_sent) },
-            { label: "Entregues", value: fmt(m.sms_delivered) },
-            { label: "Falhas",    value: fmt(m.sms_failed) },
-            { label: "Saldo",     value: fmtCredits(m.balance_credits) },
-          ],
-        }))}
-      />
+      {/* Tabela por cliente (costCenterCode) */}
+      {byClient.length > 0 && (
+        <div className="w-full overflow-x-auto rounded-[var(--radius-md)] border border-[var(--color-border)]">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-border)]">
+                <th className="px-4 py-3 text-left text-[10px] font-semibold tracking-wider uppercase text-[var(--color-text-muted)]">
+                  Cliente
+                </th>
+                <th className="px-4 py-3 text-left text-[10px] font-semibold tracking-wider uppercase text-[var(--color-text-muted)]">
+                  Cost Center
+                </th>
+                <th className="px-4 py-3 text-right text-[10px] font-semibold tracking-wider uppercase text-[var(--color-text-muted)]">
+                  Enviados
+                </th>
+                <th className="px-4 py-3 text-right text-[10px] font-semibold tracking-wider uppercase text-[var(--color-text-muted)]">
+                  Entregues
+                </th>
+                <th className="px-4 py-3 text-right text-[10px] font-semibold tracking-wider uppercase text-[var(--color-text-muted)]">
+                  Falhas
+                </th>
+                <th className="px-4 py-3 text-right text-[10px] font-semibold tracking-wider uppercase text-[var(--color-text-muted)]">
+                  Taxa
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {byClient.map((c) => {
+                const rate =
+                  c.sms_sent > 0
+                    ? ((c.sms_delivered / c.sms_sent) * 100).toFixed(1) + "%"
+                    : "—";
+                return (
+                  <tr
+                    key={c.cost_center_code}
+                    className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)] transition-colors"
+                  >
+                    <td className="px-4 py-3 font-medium text-[var(--color-text)]">
+                      {c.client_name}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-text-muted)] text-xs font-mono">
+                      {c.cost_center_code}
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold tabular-nums text-[var(--color-text)]">
+                      {fmt(c.sms_sent)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold tabular-nums text-[var(--color-text)]">
+                      {fmt(c.sms_delivered)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold tabular-nums text-[var(--color-text)]">
+                      <span className={c.sms_failed > 0 ? "text-[var(--color-warning)]" : ""}>
+                        {fmt(c.sms_failed)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold tabular-nums text-[var(--color-text)]">
+                      {rate}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
