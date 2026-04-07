@@ -5,6 +5,8 @@ import {
   Eye, MousePointerClick, ShieldAlert,
   MessageSquare, CreditCard,
 } from "lucide-react";
+// Send=Processed, CheckCircle=Delivered, Ban=Dropped, XCircle=Bounce,
+// Eye=Opened, MousePointerClick=Clicked, ShieldAlert=Spam
 import { StatCard } from "@/components/ui/Card";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { MESSAGES } from "@/lib/constants/ui";
@@ -20,6 +22,19 @@ function fmt(n: number | null | undefined) {
 function deliveryRate(sent: number | null, delivered: number | null) {
   if (!sent || !delivered) return null;
   return `${((delivered / sent) * 100).toFixed(1)}% entrega`;
+}
+
+/** Calcula percentual a/b, retorna string "X.Y%" ou null */
+function pct(a: number | null | undefined, b: number | null | undefined): string | null {
+  if (!a || !b) return null;
+  return `${((a / b) * 100).toFixed(1)}%`;
+}
+
+/** Valor absoluto + percentual na mesma célula: "1.234 (5.6%)" */
+function fmtPct(value: number, base: number): string {
+  const abs = fmt(value);
+  if (!base) return abs;
+  return `${abs} (${((value / base) * 100).toFixed(1)}%)`;
 }
 
 // ─── Sendpost (email) — dados on-demand da API Sendpost ─────────────────────
@@ -43,64 +58,64 @@ export function SendpostCards({ params }: SendpostCardsProps) {
     );
   }
 
-  const totals = data.totals;
+  const t = data.totals;
+  const processed = t.emails_sent ?? 0;
+  const delivered = t.emails_delivered ?? 0;
+  const bounce = (t.emails_hard_bounced ?? 0) + (t.emails_soft_bounced ?? 0);
 
   return (
     <div className="space-y-6">
-      {/* Cards — 8 métricas principais */}
+      {/* Cards — 7 métricas com percentuais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           label="Processed"
-          value={fmt(totals.emails_sent)}
-          delta={deliveryRate(totals.emails_sent, totals.emails_delivered) ?? undefined}
-          deltaOk
+          value={fmt(processed)}
           icon={<Send size={18} />}
         />
         <StatCard
           label="Delivered"
-          value={fmt(totals.emails_delivered)}
+          value={fmt(delivered)}
+          delta={pct(delivered, processed) ?? undefined}
+          deltaOk
           icon={<CheckCircle size={18} />}
         />
         <StatCard
           label="Dropped"
-          value={fmt(totals.emails_dropped)}
-          deltaOk={(totals.emails_dropped ?? 0) === 0}
-          delta={(totals.emails_dropped ?? 0) > 0 ? "Verificar" : "OK"}
+          value={fmt(t.emails_dropped)}
+          delta={pct(t.emails_dropped, delivered) ?? undefined}
+          deltaOk={(t.emails_dropped ?? 0) === 0}
           icon={<Ban size={18} />}
         />
         <StatCard
-          label="Hard Bounce"
-          value={fmt(totals.emails_hard_bounced)}
-          deltaOk={(totals.emails_hard_bounced ?? 0) === 0}
-          delta={(totals.emails_hard_bounced ?? 0) > 0 ? "Verificar lista" : "OK"}
+          label="Bounce"
+          value={fmt(bounce)}
+          delta={pct(bounce, delivered) ?? undefined}
+          deltaOk={bounce === 0}
           icon={<XCircle size={18} />}
         />
         <StatCard
-          label="Soft Bounce"
-          value={fmt(totals.emails_soft_bounced)}
-          deltaOk={(totals.emails_soft_bounced ?? 0) === 0}
-          delta={(totals.emails_soft_bounced ?? 0) > 0 ? "Temporário" : "OK"}
-          icon={<AlertTriangle size={18} />}
-        />
-        <StatCard
           label="Opened"
-          value={fmt(totals.emails_opened)}
-          delta={totals.emails_delivered ? `${((totals.emails_opened / totals.emails_delivered) * 100).toFixed(1)}%` : undefined}
+          value={fmt(t.emails_opened)}
+          delta={pct(t.emails_opened, delivered) ?? undefined}
           deltaOk
           icon={<Eye size={18} />}
         />
         <StatCard
           label="Clicked"
-          value={fmt(totals.emails_clicked)}
-          delta={totals.emails_delivered ? `${((totals.emails_clicked / totals.emails_delivered) * 100).toFixed(1)}%` : undefined}
+          value={fmt(t.emails_clicked)}
+          delta={
+            delivered
+              ? `${pct(t.emails_clicked, delivered)} del · ${pct(t.emails_clicked, t.emails_opened)} open`
+              : undefined
+          }
           deltaOk
           icon={<MousePointerClick size={18} />}
         />
         <StatCard
           label="Spam"
-          value={fmt(totals.emails_spam)}
-          deltaOk={(totals.emails_spam ?? 0) === 0}
-          delta={(totals.emails_spam ?? 0) > 0 ? "Atenção requerida" : "Sem ocorrências"}
+          value={fmt(t.emails_spam)}
+          delta={pct(t.emails_spam, delivered) ?? undefined}
+          deltaOk={(t.emails_spam ?? 0) === 0}
           icon={<ShieldAlert size={18} />}
         />
       </div>
@@ -112,8 +127,8 @@ export function SendpostCards({ params }: SendpostCardsProps) {
 }
 
 const SENDPOST_COLS = [
-  "Processed", "Delivered", "Dropped", "Hard Bounce",
-  "Soft Bounce", "Opened", "Clicked", "Unsubscribed", "Spam",
+  "Processed", "Delivered", "Dropped", "Bounce",
+  "Opened", "Clicked", "Unsubscribed", "Spam",
 ] as const;
 
 function SendpostSubAccountTable({ rows }: { rows: SendpostSubAccountStats[] }) {
@@ -136,29 +151,47 @@ function SendpostSubAccountTable({ rows }: { rows: SendpostSubAccountStats[] }) 
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr
-              key={r.subaccount_name}
-              className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)] transition-colors"
-            >
-              <td className="px-4 py-3 font-medium text-[var(--color-text)]">{r.subaccount_name}</td>
-              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.emails_sent)}</td>
-              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.emails_delivered)}</td>
-              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.emails_dropped)}</td>
-              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
-                <span className={r.emails_hard_bounced > 0 ? "text-[var(--color-error)]" : ""}>{fmt(r.emails_hard_bounced)}</span>
-              </td>
-              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
-                <span className={r.emails_soft_bounced > 0 ? "text-[var(--color-warning)]" : ""}>{fmt(r.emails_soft_bounced)}</span>
-              </td>
-              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.emails_opened)}</td>
-              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.emails_clicked)}</td>
-              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">{fmt(r.emails_unsubscribed)}</td>
-              <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
-                <span className={r.emails_spam > 0 ? "text-[var(--color-error)]" : ""}>{fmt(r.emails_spam)}</span>
-              </td>
-            </tr>
-          ))}
+          {rows.map((r) => {
+            const proc = r.emails_sent ?? 0;
+            const del = r.emails_delivered ?? 0;
+            const bnc = (r.emails_hard_bounced ?? 0) + (r.emails_soft_bounced ?? 0);
+            return (
+              <tr
+                key={r.subaccount_name}
+                className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)] transition-colors"
+              >
+                <td className="px-4 py-3 font-medium text-[var(--color-text)]">{r.subaccount_name}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
+                  {fmt(proc)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
+                  {fmtPct(del, proc)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
+                  {fmtPct(r.emails_dropped ?? 0, del)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
+                  <span className={bnc > 0 ? "text-[var(--color-error)]" : ""}>
+                    {fmtPct(bnc, del)}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
+                  {fmtPct(r.emails_opened ?? 0, del)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
+                  {fmtPct(r.emails_clicked ?? 0, del)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
+                  {fmt(r.emails_unsubscribed)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
+                  <span className={(r.emails_spam ?? 0) > 0 ? "text-[var(--color-error)]" : ""}>
+                    {fmtPct(r.emails_spam ?? 0, del)}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

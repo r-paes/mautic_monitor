@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useCallback } from "react";
 import { RefreshCw } from "lucide-react";
 import { startOfDay } from "date-fns";
+import { useQueryClient } from "@tanstack/react-query";
 import { Topnav } from "@/components/layout/Topnav";
 import { Tabs } from "@/components/ui/Tabs";
 import { Button } from "@/components/ui/Button";
@@ -21,6 +22,8 @@ function GatewaysContent() {
     start: startOfDay(new Date()),
     end: new Date(),
   });
+  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
 
   const params = {
     start: dateRange.start.toISOString(),
@@ -29,6 +32,18 @@ function GatewaysContent() {
 
   const { data: metrics, isLoading, refetch } = useGatewayMetrics(params);
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // Invalida todas as queries de gateways (sendpost on-demand + métricas locais)
+      await queryClient.invalidateQueries({ queryKey: ["sendpost-stats"] });
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [queryClient, refetch]);
+
+  const isBusy = isLoading || refreshing;
   const isConfigTab = activeTab === "config";
 
   const topnavTabs = (
@@ -47,8 +62,8 @@ function GatewaysContent() {
         variant="primary"
         size="md"
         icon={<RefreshCw size={14} />}
-        onClick={() => refetch()}
-        loading={isLoading}
+        onClick={handleRefresh}
+        loading={isBusy}
       >
         <span className="hidden sm:inline">{MESSAGES.buttons.refresh}</span>
       </Button>
