@@ -1,6 +1,10 @@
 "use client";
 
-import { Mail, CheckCircle, XCircle, AlertTriangle, MessageSquare, CreditCard } from "lucide-react";
+import {
+  Send, CheckCircle, XCircle, AlertTriangle, Ban,
+  Eye, MousePointerClick, UserMinus, ShieldAlert,
+  MessageSquare, CreditCard,
+} from "lucide-react";
 import { StatCard } from "@/components/ui/Card";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { MESSAGES } from "@/lib/constants/ui";
@@ -40,37 +44,70 @@ export function SendpostCards({ params }: SendpostCardsProps) {
   }
 
   const totals = data.totals;
-  const totalBounces = (totals.emails_hard_bounced ?? 0) + (totals.emails_soft_bounced ?? 0);
 
   return (
     <div className="space-y-6">
-      {/* Cards de totais consolidados */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* Cards — um por coluna da tabela */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-5 gap-4">
         <StatCard
-          label="Emails Enviados"
+          label="Processed"
           value={fmt(totals.emails_sent)}
           delta={deliveryRate(totals.emails_sent, totals.emails_delivered) ?? undefined}
           deltaOk
-          icon={<Mail size={18} />}
+          icon={<Send size={18} />}
         />
         <StatCard
-          label="Entregues"
+          label="Delivered"
           value={fmt(totals.emails_delivered)}
           icon={<CheckCircle size={18} />}
         />
         <StatCard
-          label="Bounces"
-          value={fmt(totalBounces)}
-          deltaOk={totalBounces === 0}
-          delta={totalBounces > 0 ? "Verificar lista" : "Dentro do limite"}
+          label="Dropped"
+          value={fmt(totals.emails_dropped)}
+          deltaOk={(totals.emails_dropped ?? 0) === 0}
+          delta={(totals.emails_dropped ?? 0) > 0 ? "Verificar" : "OK"}
+          icon={<Ban size={18} />}
+        />
+        <StatCard
+          label="Hard Bounce"
+          value={fmt(totals.emails_hard_bounced)}
+          deltaOk={(totals.emails_hard_bounced ?? 0) === 0}
+          delta={(totals.emails_hard_bounced ?? 0) > 0 ? "Verificar lista" : "OK"}
           icon={<XCircle size={18} />}
+        />
+        <StatCard
+          label="Soft Bounce"
+          value={fmt(totals.emails_soft_bounced)}
+          deltaOk={(totals.emails_soft_bounced ?? 0) === 0}
+          delta={(totals.emails_soft_bounced ?? 0) > 0 ? "Temporário" : "OK"}
+          icon={<AlertTriangle size={18} />}
+        />
+        <StatCard
+          label="Opened"
+          value={fmt(totals.emails_opened)}
+          delta={totals.emails_delivered ? `${((totals.emails_opened / totals.emails_delivered) * 100).toFixed(1)}%` : undefined}
+          deltaOk
+          icon={<Eye size={18} />}
+        />
+        <StatCard
+          label="Clicked"
+          value={fmt(totals.emails_clicked)}
+          delta={totals.emails_delivered ? `${((totals.emails_clicked / totals.emails_delivered) * 100).toFixed(1)}%` : undefined}
+          deltaOk
+          icon={<MousePointerClick size={18} />}
+        />
+        <StatCard
+          label="Unsubscribed"
+          value={fmt(totals.emails_unsubscribed)}
+          deltaOk={(totals.emails_unsubscribed ?? 0) === 0}
+          icon={<UserMinus size={18} />}
         />
         <StatCard
           label="Spam"
           value={fmt(totals.emails_spam)}
           deltaOk={(totals.emails_spam ?? 0) === 0}
           delta={(totals.emails_spam ?? 0) > 0 ? "Atenção requerida" : "Sem ocorrências"}
-          icon={<AlertTriangle size={18} />}
+          icon={<ShieldAlert size={18} />}
         />
       </div>
 
