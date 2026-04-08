@@ -48,7 +48,7 @@ export function LogsTable({ instanceId, instanceNames }: Props) {
 
   const { data: logs, isLoading } = useServiceLogs({
     instance_id: instanceId || undefined,
-    level: level || undefined,
+    log_level: level || undefined,
     limit: 200,
   });
 
