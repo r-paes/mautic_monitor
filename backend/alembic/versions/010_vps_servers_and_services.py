@@ -43,7 +43,7 @@ def upgrade() -> None:
 
     # ── 2. Criar ENUM service_type e tabela instance_services ───────────────
 
-    # Usa DO $$ para criar ENUM apenas se não existir (PostgreSQL nativo)
+    # Cria ENUM e tabela via SQL puro para evitar problemas do SQLAlchemy com asyncpg
     op.execute("""
         DO $$ BEGIN
             CREATE TYPE service_type AS ENUM ('database', 'crons', 'web');
@@ -52,15 +52,16 @@ def upgrade() -> None:
         END $$
     """)
 
-    op.create_table(
-        "instance_services",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("instance_id", UUID(as_uuid=True), sa.ForeignKey("instances.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("service_type", sa.Enum("database", "crons", "web", name="service_type", create_type=False), nullable=False),
-        sa.Column("container_name", sa.String(200), nullable=False),
-        sa.Column("active", sa.Boolean(), nullable=False, server_default="true"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-    )
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS instance_services (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            instance_id UUID NOT NULL REFERENCES instances(id) ON DELETE CASCADE,
+            service_type service_type NOT NULL,
+            container_name VARCHAR(200) NOT NULL,
+            active BOOLEAN NOT NULL DEFAULT true,
+            created_at TIMESTAMPTZ DEFAULT now()
+        )
+    """)
 
     op.create_index("ix_instance_services_instance", "instance_services", ["instance_id"])
 
