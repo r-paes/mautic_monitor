@@ -241,7 +241,7 @@ export function AvantCards({ metrics }: AvantCardsProps) {
   const totals = byClient.length > 0 ? clientTotals : metricTotals;
   const displayBalance = balance ?? metricTotals.balance;
 
-  if (avant.length === 0 && !statsLoading && byClient.length === 0) {
+  if (avant.length === 0 && !statsLoading && byClient.length === 0 && displayBalance == null) {
     return (
       <p className="text-sm text-[var(--color-text-muted)] py-8 text-center">
         {MESSAGES.emptyStates.gateways}
