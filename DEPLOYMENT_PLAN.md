@@ -43,10 +43,11 @@ coletando métricas de performance, alertas e status de envio via API, banco de 
 
 | Camada      | Status     | Detalhes |
 |-------------|------------|----------|
-| Backend     | ✅ Completo | P1–P4 + Ajustes 1–4 + Auditoria 0A/0B |
-| Frontend    | ✅ Completo | Blocos A–H + Ajustes 1–3 + Auditoria 0A/0B |
-| Auditoria   | ✅ Completo | Correções bloqueantes + melhorias estruturais |
-| Deploy      | 🟡 Em andamento | Etapas 1–4 concluídas, Etapa 5 parcial |
+| Backend     | ✅ Completo | P1–P4 + Reestruturação VPS + Auditoria S1-S7 |
+| Frontend    | ✅ Completo | Blocos A–H + VPS/Instâncias separados + Scheduler UI |
+| Auditoria   | ✅ Completo | 5 categorias auditadas, P0+P1 corrigidos |
+| Deploy      | 🟡 Em andamento | Etapas 1–4 + Reestruturação VPS concluídas |
+| Integração  | 🟡 Em andamento | Etapa 7 — testes com dados reais |
 
 ---
 
@@ -125,10 +126,16 @@ coletando métricas de performance, alertas e status de envio via API, banco de 
 - [x] Editar instância funciona
 - [x] Excluir com confirmação funciona
 
-**4.3 — VPS & SSH ✅ (UI)**
-- [x] Wizard 2 passos funciona
-- [x] Chave RSA gerada e copiável
-- [ ] Teste de conexão SSH com VPS real (pendente — requer VPS configurada)
+**4.3 — VPS & SSH ✅**
+- [x] VPS separada de instâncias (entidade independente)
+- [x] CRUD VPS funciona (criar, editar, excluir)
+- [x] Wizard 2 passos funciona (dados + chave SSH)
+- [x] Chave RSA 4096 gerada e copiável
+- [x] Cards CPU/Memória/Disco por VPS
+- [x] Instância associada via dropdown
+- [x] Serviços (Web/DB/Crons) configuráveis por instância
+- [x] Tabela instâncias com status VPS + status containers (Web/DB/Crons)
+- [ ] Teste de conexão SSH com VPS real (Etapa 7.1)
 
 **4.4 — Gateways ✅**
 - [x] Tab Configurações: credenciais salvas (Account API Key + SubAccount API Key)
@@ -160,28 +167,25 @@ coletando métricas de performance, alertas e status de envio via API, banco de 
 
 ---
 
-### Etapa 5 — Configurações Externas 🟡 EM ANDAMENTO
+### Etapa 5 — Configurações Externas ✅ CONCLUÍDA (UI pronta)
 
 **5.1 — Sendpost ✅ Parcial**
 - [x] Account API Key configurada (coleta de stats on-demand)
 - [x] Endpoint `GET /gateways/sendpost/stats` consulta API direto por período
 - [x] 3 sub-accounts listadas automaticamente
-- [ ] SubAccount API Key para envio de alertas/relatórios (campo existe na UI, falta preencher)
+- [ ] SubAccount API Key para envio de alertas/relatórios (Etapa 7.3)
 
-**5.2 — Avant SMS** 🔲 Pendente
-- [ ] Token Alpha configurado via Gateways → Configurações
-- [ ] URL da API configurada
-- [ ] Webhook DLR: `POST https://appmonitor.spacecrm.online/webhooks/avant`
-- [ ] Cost Centers cadastrados
-
-**5.3 — Instâncias Mautic** 🔲 Pendente
-- [ ] Cadastrar instância real com credenciais API Mautic
-- [ ] Cadastrar credenciais MySQL da instância
-- [ ] Configurar SSH para VPS da instância
+**5.2 — Avant SMS** → Etapa 7.3
+**5.3 — Instâncias Mautic** → Etapa 7.2
+**5.4 — VPS** → Etapa 7.1
 
 ---
 
-### Etapa 6 — Checklist Final de Produção 🔲 PENDENTE
+### Etapa 6 — Reestruturação VPS vs Instâncias ✅ CONCLUÍDA (2026-04-07)
+
+---
+
+### Etapa 8 — Checklist Final de Produção 🔲 PENDENTE
 
 **Segurança:**
 - [x] `SECRET_KEY` forte configurada
@@ -227,7 +231,7 @@ coletando métricas de performance, alertas e status de envio via API, banco de 
 
 ---
 
-## Reestruturação VPS vs Instâncias (2026-04-07)
+## Detalhes Técnicos — Reestruturação VPS vs Instâncias (Etapa 6)
 
 ### Concluído
 - **Fase 1:** Novos modelos `VpsServer`, `InstanceService`, `SchedulerConfig` + migration 010
@@ -258,17 +262,101 @@ coletando métricas de performance, alertas e status de envio via API, banco de 
 
 ---
 
-## Próximos Passos
+## Etapa 7 — Integração com Dados Reais 🟡 EM ANDAMENTO
 
-1. **Redeploy backend + frontend** com todas as alterações (Fases 1-6)
-2. **Executar migration 010 + 011** no banco de produção
-3. **Configurar Avant SMS** (Token + URL + Webhook + Cost Centers)
-4. **Configurar SubAccount API Key** Sendpost para envio de alertas
-5. **Cadastrar instância Mautic real** com credenciais API + MySQL
-6. **Cadastrar VPS real** e associar instâncias
-7. **Testar alertas** com dados reais
-8. **Testar relatórios** com dados reais
-9. **Completar Etapa 6** (backup, scheduler check)
+Testes etapa a etapa conectando infraestrutura real:
+- 3 instâncias Mautic
+- 2 VPS
+- Gateways: Sendpost (email) + Avant SMS
+
+### 7.1 — Cadastrar VPS Reais 🔲
+
+Para cada VPS (2 servidores):
+
+| Passo | Ação | Verificação |
+|-------|------|-------------|
+| 1 | VPS & Logs → Nova VPS (nome, host/IP, porta, usuário) | VPS aparece na lista |
+| 2 | Gerar chave SSH (botão no wizard) | Chave pública exibida |
+| 3 | Copiar chave pública → VPS (`~/.ssh/authorized_keys`) | — |
+| 4 | Testar conexão SSH (botão no wizard) | "Conexão SSH estabelecida com sucesso" |
+| 5 | Verificar coleta automática (aguardar 15 min ou próximo ciclo) | Cards CPU/Memória/Disco com dados |
+
+### 7.2 — Cadastrar Instâncias Mautic 🔲
+
+Para cada instância (3 instâncias):
+
+| Passo | Ação | Verificação |
+|-------|------|-------------|
+| 1 | Instâncias → Nova Instância (nome, URL Mautic, API user/password) | Instância aparece na tabela |
+| 2 | Associar VPS no dropdown | Coluna VPS mostra nome da VPS |
+| 3 | Editar → Adicionar serviços (Web, DB, Crons com nomes dos containers) | Serviços listados no modal |
+| 4 | Configurar credenciais MySQL (host, porta, banco, user, password) | — |
+| 5 | Verificar coleta API Mautic (aguardar 5 min) | Dashboard com dados da instância |
+| 6 | Verificar coleta DB Mautic (aguardar 15 min) | Emails queued, sent no dashboard |
+| 7 | Verificar status containers Web/DB/Crons na tabela | Badges OK/Parado/Erro |
+| 8 | Verificar Status VPS na tabela | Badge Online/Atenção/Crítico |
+
+### 7.3 — Configurar Gateways 🔲
+
+**Sendpost (email):**
+
+| Passo | Ação | Verificação |
+|-------|------|-------------|
+| 1 | Gateways → Configurações → Account API Key (já feito) | ✅ Já configurado |
+| 2 | Preencher SubAccount API Key (para envio de alertas/relatórios) | Campo salvo |
+| 3 | Tab Email (Sendpost) → selecionar período → Atualizar | Stats por sub-account |
+
+**Avant SMS:**
+
+| Passo | Ação | Verificação |
+|-------|------|-------------|
+| 1 | Gateways → Configurações → Token Alpha | Campo salvo |
+| 2 | Configurar URL da API | Campo salvo |
+| 3 | Cadastrar Cost Centers | Centros de custo listados |
+| 4 | Configurar webhook DLR: `POST /webhooks/avant` | — |
+| 5 | Tab SMS (Avant) → verificar dados | Stats SMS visíveis |
+
+### 7.4 — Testar Alertas 🔲
+
+| Passo | Ação | Verificação |
+|-------|------|-------------|
+| 1 | Aguardar motor de alertas rodar (1 min) | Sem erros nos logs do scheduler |
+| 2 | Verificar se alertas aparecem na página Alertas | Lista de alertas ativos |
+| 3 | Testar ACK de alerta | Alerta movido para Histórico |
+| 4 | Verificar email de alerta (se SubAccount Key configurada) | Email recebido |
+| 5 | Verificar SMS de alerta (se Avant configurado, apenas CRITICAL) | SMS recebido |
+
+### 7.5 — Testar Relatórios 🔲
+
+| Passo | Ação | Verificação |
+|-------|------|-------------|
+| 1 | Relatórios → Agendamento → Nova config | Config criada |
+| 2 | Gerar relatório manual | Status "success", arquivo gerado |
+| 3 | Preview/download do relatório | PDF/HTML visível |
+| 4 | Verificar cron 9h/18h | Relatório gerado automaticamente |
+| 5 | Verificar envio por email/SMS | Entregue |
+
+### 7.6 — Testar Dashboard 🔲
+
+| Passo | Ação | Verificação |
+|-------|------|-------------|
+| 1 | Dashboard → Global | 4 stat cards com dados reais |
+| 2 | Dashboard → por instância | Cards por instância com dados |
+| 3 | Filtro de período funciona | Dados mudam conforme período |
+| 4 | Auto-refresh (60s) | Dados atualizam sem recarregar |
+
+### 7.7 — Configurações do Scheduler 🔲
+
+| Passo | Ação | Verificação |
+|-------|------|-------------|
+| 1 | Configurações → Intervalos | 5 intervalos editáveis |
+| 2 | Alterar intervalo (ex: VPS SSH de 15 para 10 min) | Valor salvo |
+| 3 | Reiniciar backend | Novo intervalo aplicado |
+| 4 | Verificar nos logs do scheduler | Job roda no novo intervalo |
+
+---
+
+## Etapa 8 — Checklist Final de Produção 🔲 PENDENTE
 
 ---
 
