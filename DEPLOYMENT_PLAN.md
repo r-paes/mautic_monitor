@@ -135,7 +135,7 @@ coletando métricas de performance, alertas e status de envio via API, banco de 
 - [x] Instância associada via dropdown
 - [x] Serviços (Web/DB/Crons) configuráveis por instância
 - [x] Tabela instâncias com status VPS + status containers (Web/DB/Crons)
-- [ ] Teste de conexão SSH com VPS real (Etapa 7.1)
+- [ ] Teste de conexão EasyPanel com VPS real (Etapa 7.1)
 
 **4.4 — Gateways ✅**
 - [x] Tab Configurações: credenciais salvas (Account API Key + SubAccount API Key)
@@ -185,7 +185,7 @@ coletando métricas de performance, alertas e status de envio via API, banco de 
 
 ---
 
-### Etapa 8 — Checklist Final de Produção 🔲 PENDENTE
+### Etapa 9 — Checklist Final de Produção 🔲 PENDENTE
 
 **Segurança:**
 - [x] `SECRET_KEY` forte configurada
@@ -269,19 +269,17 @@ Testes etapa a etapa conectando infraestrutura real:
 - 2 VPS
 - Gateways: Sendpost (email) + Avant SMS
 
-### 7.1 — Cadastrar VPS Reais 🔲
+### 7.1 — Cadastrar VPS Reais ✅
 
-Para cada VPS (2 servidores):
+Para cada VPS (2 servidores via EasyPanel API):
 
 | Passo | Ação | Verificação |
 |-------|------|-------------|
-| 1 | VPS & Logs → Nova VPS (nome, host/IP, porta, usuário) | VPS aparece na lista |
-| 2 | Gerar chave SSH (botão no wizard) | Chave pública exibida |
-| 3 | Copiar chave pública → VPS (`~/.ssh/authorized_keys`) | — |
-| 4 | Testar conexão SSH (botão no wizard) | "Conexão SSH estabelecida com sucesso" |
-| 5 | Verificar coleta automática (aguardar 15 min ou próximo ciclo) | Cards CPU/Memória/Disco com dados |
+| 1 | VPS & Logs → Nova VPS (nome, URL EasyPanel, API Key) | VPS aparece na lista |
+| 2 | Editar VPS → Testar conexão | "Conexão estabelecida com sucesso" + info CPUs/RAM/Disco |
+| 3 | Verificar coleta automática (aguardar 15 min ou próximo ciclo) | Cards CPU/Memória/Disco com dados |
 
-### 7.2 — Cadastrar Instâncias Mautic 🔲
+### 7.2 — Cadastrar Instâncias Mautic 🟡 PARCIAL
 
 Para cada instância (3 instâncias):
 
@@ -289,32 +287,24 @@ Para cada instância (3 instâncias):
 |-------|------|-------------|
 | 1 | Instâncias → Nova Instância (nome, URL Mautic, API user/password) | Instância aparece na tabela |
 | 2 | Associar VPS no dropdown | Coluna VPS mostra nome da VPS |
-| 3 | Editar → Adicionar serviços (Web, DB, Crons com nomes dos containers) | Serviços listados no modal |
+| 3 | Editar → Adicionar serviços (Web, DB, Crons selecionando containers do EasyPanel) | Serviços listados no modal |
 | 4 | Configurar credenciais MySQL (host, porta, banco, user, password) | — |
 | 5 | Verificar coleta API Mautic (aguardar 5 min) | Dashboard com dados da instância |
 | 6 | Verificar coleta DB Mautic (aguardar 15 min) | Emails queued, sent no dashboard |
 | 7 | Verificar status containers Web/DB/Crons na tabela | Badges OK/Parado/Erro |
 | 8 | Verificar Status VPS na tabela | Badge Online/Atenção/Crítico |
 
-### 7.3 — Configurar Gateways 🔲
+### 7.3 — Configurar Gateways 🟡 PARCIAL
 
-**Sendpost (email):**
-
-| Passo | Ação | Verificação |
-|-------|------|-------------|
-| 1 | Gateways → Configurações → Account API Key (já feito) | ✅ Já configurado |
-| 2 | Preencher SubAccount API Key (para envio de alertas/relatórios) | Campo salvo |
-| 3 | Tab Email (Sendpost) → selecionar período → Atualizar | Stats por sub-account |
-
-**Avant SMS:**
+**Sendpost (email):** ✅
 
 | Passo | Ação | Verificação |
 |-------|------|-------------|
-| 1 | Gateways → Configurações → Token Alpha | Campo salvo |
-| 2 | Configurar URL da API | Campo salvo |
-| 3 | Cadastrar Cost Centers | Centros de custo listados |
-| 4 | Configurar webhook DLR: `POST /webhooks/avant` | — |
-| 5 | Tab SMS (Avant) → verificar dados | Stats SMS visíveis |
+| 1 | Account API Key | ✅ Configurado |
+| 2 | SubAccount API Key | ✅ Configurado |
+| 3 | Tab Email (Sendpost) → stats on-demand | ✅ Funcionando |
+
+**Avant SMS:** ⏸️ AGUARDANDO REESTRUTURAÇÃO (ver Etapa 9)
 
 ### 7.4 — Testar Alertas 🔲
 
@@ -350,13 +340,60 @@ Para cada instância (3 instâncias):
 | Passo | Ação | Verificação |
 |-------|------|-------------|
 | 1 | Configurações → Intervalos | 5 intervalos editáveis |
-| 2 | Alterar intervalo (ex: VPS SSH de 15 para 10 min) | Valor salvo |
+| 2 | Alterar intervalo (ex: VPS de 15 para 10 min) | Valor salvo |
 | 3 | Reiniciar backend | Novo intervalo aplicado |
 | 4 | Verificar nos logs do scheduler | Job roda no novo intervalo |
 
 ---
 
-## Etapa 8 — Checklist Final de Produção 🔲 PENDENTE
+## Etapa 8 — Reestruturação Avant SMS 🔲 PENDENTE
+
+Redesign completo da integração Avant SMS: de token único para múltiplas contas com monitoramento de saldo.
+
+### Fase A — Backend: Model + Migration
+
+| Item | Descrição |
+|------|-----------|
+| Criar `AvantAccount` | `id`, `name` (conta), `company_name` (razão social), `token_enc` (Fernet), `active`, `is_alert_account` (bool), `created_at` |
+| Criar `AvantBalanceHistory` | `id`, `account_id`, `balance`, `captured_at` — snapshot periódico de saldo |
+| Remover `AvantSmsLog` | Não mais necessário (rastreava DLR do monitor, não do Mautic) |
+| Remover `AvantCostCenter` | Substituído por `AvantAccount` |
+| Migration 013 | Cria novas tabelas, dropa antigas |
+| URL da API Avant | Config global (mesma para todas as contas) |
+
+### Fase B — Backend: Collector + Router
+
+| Item | Descrição |
+|------|-----------|
+| Simplificar `avant_sms.py` | `get_balance(token)` + `send_sms(token, ...)` |
+| Novo router `avant_accounts.py` | CRUD de contas + `GET /balances` (saldo on-demand de todas) |
+| Atualizar `sms_alert.py` | Busca conta com `is_alert_account=True` |
+| Scheduler | Job periódico grava snapshot de saldo em `AvantBalanceHistory` |
+| Remover router `avant.py` | Cost centers e stats antigos |
+
+### Fase C — Frontend
+
+| Item | Descrição |
+|------|-----------|
+| Tab SMS (Avant) | Tabela de contas com saldos on-demand (Razão Social, Nome, Saldo, Status) + consumo diário |
+| Configurações → Avant | CRUD de contas (nome, razão social, token) + marcar conta de alertas |
+| Remover | `CostCenterManager`, referências ao `AvantSmsLog` |
+
+### Fase D — Configurações de Alerta SMS
+
+| Item | Descrição |
+|------|-----------|
+| Configurações → Alertas | Dropdown para selecionar conta Avant para envio de alertas |
+| Número(s) destinatário(s) | Campo para configurar destinatários de SMS de alerta |
+
+### O que permanece igual
+
+- Coleta de SMS do Mautic via MySQL → Dashboard (`HealthMetric.sms_sent_mautic`)
+- URL base da API Avant (global)
+
+---
+
+## Etapa 9 — Checklist Final de Produção 🔲 PENDENTE
 
 ---
 
