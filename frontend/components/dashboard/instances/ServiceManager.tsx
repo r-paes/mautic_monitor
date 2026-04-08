@@ -50,8 +50,8 @@ export function ServiceManager({ instanceId, services }: Props) {
   const usedTypes = new Set(services.map((s) => s.service_type));
   const availableTypes = SERVICE_TYPES.filter((t) => !usedTypes.has(t.value));
 
-  function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
+  function handleAdd(e?: React.FormEvent | React.MouseEvent) {
+    e?.preventDefault();
     if (!newContainer.trim()) return;
     createService(
       { instanceId, data: { service_type: newType, container_name: newContainer.trim() } },
@@ -136,9 +136,9 @@ export function ServiceManager({ instanceId, services }: Props) {
         </p>
       )}
 
-      {/* Formulário para adicionar novo serviço */}
+      {/* Formulário para adicionar novo serviço (usa div para não conflitar com form pai) */}
       {showForm && (
-        <form onSubmit={handleAdd} className="flex items-end gap-2 p-3 rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-2)]">
+        <div className="flex items-end gap-2 p-3 rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-2)]">
           <div className="w-36">
             <label className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1">
               Tipo
@@ -164,17 +164,24 @@ export function ServiceManager({ instanceId, services }: Props) {
               value={newContainer}
               onChange={(e) => setNewContainer(e.target.value)}
               placeholder="projeto_database"
-              required
               autoFocus
             />
           </div>
-          <Button variant="primary" size="sm" loading={creating} type="submit">
+          <Button
+            variant="primary"
+            size="sm"
+            loading={creating}
+            onClick={(e: React.MouseEvent) => {
+              e.preventDefault();
+              handleAdd(e);
+            }}
+          >
             Adicionar
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>
             Cancelar
           </Button>
-        </form>
+        </div>
       )}
 
       {/* Info: máximo 3 serviços */}

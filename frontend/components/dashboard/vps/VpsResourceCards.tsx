@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Cpu, MemoryStick, HardDrive, Pencil, Trash2, Terminal, Server } from "lucide-react";
-import { Card, StatCard } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { MESSAGES } from "@/lib/constants/ui";
@@ -210,29 +210,8 @@ export function VpsResourceCards({ metrics, vpsServers }: Props) {
     );
   }
 
-  const metricsWithData = metrics.filter((m) => m.cpu_percent != null);
-  const totals = metricsWithData.reduce(
-    (acc, m) => ({
-      cpu: acc.cpu + (m.cpu_percent ?? 0),
-      mem: acc.mem + (m.memory_percent ?? 0),
-      disk: acc.disk + (m.disk_percent ?? 0),
-      count: acc.count + 1,
-    }),
-    { cpu: 0, mem: 0, disk: 0, count: 0 }
-  );
-  const avg = (v: number) =>
-    totals.count ? (v / totals.count).toFixed(1) + "%" : "—";
-
   return (
-    <div className="space-y-6">
-      {/* Resumo global */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="CPU Médio"     value={avg(totals.cpu)}  icon={<Cpu size={18} />} />
-        <StatCard label="Memória Média" value={avg(totals.mem)}  icon={<MemoryStick size={18} />} />
-        <StatCard label="Disco Médio"   value={avg(totals.disk)} icon={<HardDrive size={18} />} />
-      </div>
-
-      {/* Cards por VPS */}
+    <>
       <div className="space-y-4">
         {vpsServers.map((vps) => (
           <VpsCard
@@ -265,6 +244,6 @@ export function VpsResourceCards({ metrics, vpsServers }: Props) {
         confirmVariant="danger"
         loading={deleting}
       />
-    </div>
+    </>
   );
 }
