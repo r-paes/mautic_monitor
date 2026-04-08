@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2, Check, Minus, Server } from "lucide-react";
+import { Pencil, Trash2, Minus, Server } from "lucide-react";
 import { Table } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { MESSAGES } from "@/lib/constants/ui";
 import { useDeleteInstance } from "@/lib/hooks/useInstances";
-import type { Instance } from "@/lib/api/instances";
+import { useServiceStatus } from "@/lib/hooks/useVps";
+import type { Instance, InstanceService } from "@/lib/api/instances";
+import type { ServiceStatusEntry } from "@/lib/api/vps";
 
 interface Props {
   data: Instance[];
@@ -16,14 +18,63 @@ interface Props {
   onEdit: (instance: Instance) => void;
 }
 
-function StatusIcon({ ok }: { ok: boolean }) {
-  if (ok) return <Check size={14} className="text-[var(--color-ok)]" />;
-  return <Minus size={14} className="text-[var(--color-text-muted)]" />;
+type ContainerStatusVariant = "ok" | "critical" | "warning" | "neutral";
+
+function containerStatusVariant(status?: string): ContainerStatusVariant {
+  switch (status) {
+    case "running":    return "ok";
+    case "stopped":
+    case "error":      return "critical";
+    case "restarting": return "warning";
+    default:           return "neutral";
+  }
+}
+
+function containerStatusLabel(status?: string): string {
+  switch (status) {
+    case "running":    return "OK";
+    case "stopped":    return "Parado";
+    case "error":      return "Erro";
+    case "restarting": return "Reiniciando";
+    default:           return "—";
+  }
+}
+
+function ServiceCell({
+  serviceType,
+  services,
+  serviceStatuses,
+  instanceId,
+}: {
+  serviceType: "web" | "database" | "crons";
+  services: InstanceService[];
+  serviceStatuses: ServiceStatusEntry[];
+  instanceId: string;
+}) {
+  const svc = services.find((s) => s.service_type === serviceType);
+  if (!svc) {
+    return <Minus size={14} className="text-[var(--color-text-muted)]" />;
+  }
+
+  // Busca status mais recente deste container para esta instância
+  const status = serviceStatuses.find(
+    (ss) => ss.instance_id === instanceId && ss.container_name === svc.container_name
+  );
+
+  const variant = containerStatusVariant(status?.status);
+  const label = containerStatusLabel(status?.status);
+
+  return (
+    <Badge variant={variant} dot>
+      {label}
+    </Badge>
+  );
 }
 
 export function InstancesTable({ data, isLoading, onEdit }: Props) {
   const [deleting, setDeleting] = useState<Instance | null>(null);
   const { mutate: removeInstance, isPending } = useDeleteInstance();
+  const { data: serviceStatuses } = useServiceStatus();
 
   function handleConfirmDelete() {
     if (!deleting) return;
@@ -46,15 +97,6 @@ export function InstancesTable({ data, isLoading, onEdit }: Props) {
       ),
     },
     {
-      key: "status",
-      header: "Status",
-      render: (row: Instance) => (
-        <Badge variant={row.active ? "ok" : "neutral"} dot>
-          {row.active ? MESSAGES.status.online : "Inativa"}
-        </Badge>
-      ),
-    },
-    {
       key: "vps",
       header: "VPS",
       render: (row: Instance) =>
@@ -68,23 +110,43 @@ export function InstancesTable({ data, isLoading, onEdit }: Props) {
         ),
     },
     {
+      key: "web",
+      header: "Web",
+      align: "center" as const,
+      render: (row: Instance) => (
+        <ServiceCell
+          serviceType="web"
+          services={row.services ?? []}
+          serviceStatuses={serviceStatuses ?? []}
+          instanceId={row.id}
+        />
+      ),
+    },
+    {
       key: "db",
       header: "DB",
       align: "center" as const,
-      render: (row: Instance) => <StatusIcon ok={!!row.db_host} />,
+      render: (row: Instance) => (
+        <ServiceCell
+          serviceType="database"
+          services={row.services ?? []}
+          serviceStatuses={serviceStatuses ?? []}
+          instanceId={row.id}
+        />
+      ),
     },
     {
-      key: "services",
-      header: "Serviços",
+      key: "crons",
+      header: "Crons",
       align: "center" as const,
-      render: (row: Instance) => {
-        const count = row.services?.length ?? 0;
-        return count > 0 ? (
-          <Badge variant="neutral">{count}</Badge>
-        ) : (
-          <Minus size={14} className="text-[var(--color-text-muted)]" />
-        );
-      },
+      render: (row: Instance) => (
+        <ServiceCell
+          serviceType="crons"
+          services={row.services ?? []}
+          serviceStatuses={serviceStatuses ?? []}
+          instanceId={row.id}
+        />
+      ),
     },
     {
       key: "actions",

@@ -10,6 +10,14 @@ export function useVpsMetrics(params?: { vps_id?: string; hours?: number; limit?
   });
 }
 
+export function useServiceStatus(params?: { vps_id?: string; instance_id?: string }) {
+  return useQuery({
+    queryKey: ["service-status", params],
+    queryFn: () => vpsApi.services(params),
+    refetchInterval: DASHBOARD_REFRESH_INTERVAL_MS,
+  });
+}
+
 export function useServiceLogs(params?: {
   vps_id?: string;
   instance_id?: string;

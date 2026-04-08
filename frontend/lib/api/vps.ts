@@ -25,12 +25,23 @@ export interface ServiceLog {
   captured_at: string;
 }
 
+export interface ServiceStatusEntry {
+  id: string;
+  time: string;
+  instance_id: string;
+  vps_id: string;
+  container_name: string;
+  status: "running" | "stopped" | "restarting" | "error" | "unknown";
+  restart_count: number | null;
+  image: string | null;
+}
+
 export const vpsApi = {
   metrics: (params?: { vps_id?: string; hours?: number; limit?: number }) =>
     apiClient.get<VpsMetric[]>("/vps/metrics", { params }).then((r) => r.data),
 
   services: (params?: { vps_id?: string; instance_id?: string }) =>
-    apiClient.get("/vps/services", { params }).then((r) => r.data),
+    apiClient.get<ServiceStatusEntry[]>("/vps/services", { params }).then((r) => r.data),
 
   logs: (params?: {
     vps_id?: string;

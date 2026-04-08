@@ -168,9 +168,9 @@ export function InstanceFormModal({ open, onClose, instance }: Props) {
       }
     >
       <form id="instance-form" onSubmit={handleSubmit} className="space-y-5">
-        {/* Acesso à API */}
+        {/* API REST do Mautic */}
         <div>
-          <SectionTitle>Acesso à API</SectionTitle>
+          <SectionTitle>API REST do Mautic</SectionTitle>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Nome" required>
               <input
