@@ -5,7 +5,7 @@ Jobs registrados:
   1. collect_mautic_api     — intervalo configurável (scheduler_configs)
   2. collect_gateways       — intervalo configurável
   3. collect_mautic_db      — intervalo configurável
-  4. collect_vps_ssh        — intervalo configurável (itera por VPS, não instâncias)
+  4. collect_vps_easypanel   — intervalo configurável (itera por VPS, não instâncias)
   5. run_alert_engine       — intervalo configurável
   6. generate_reports_am    — cron diário HH:00 BRT (REPORT_CRON_MORNING)
   7. generate_reports_pm    — cron diário HH:00 BRT (REPORT_CRON_EVENING)
@@ -29,7 +29,7 @@ from app.collectors.mautic_api import MauticAPICollector
 from app.collectors.mautic_postgres import MauticDBCollector
 from app.collectors.sendpost import SendpostCollector
 from app.collectors.avant_sms import AvantSMSCollector
-from app.collectors.vps_ssh import VpsSSHCollector
+from app.collectors.easypanel import EasyPanelCollector
 from app.models.instance import Instance
 from app.models.vps_server import VpsServer
 from app.models.instance_service import InstanceService
@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_INTERVALS = {
     "mautic_api_interval": 5,
     "mautic_db_interval": 15,
-    "vps_ssh_interval": 15,
+    "vps_interval": 15,
     "gateway_interval": 5,
     "alert_engine_interval": 1,
 }
@@ -114,11 +114,11 @@ def create_scheduler() -> AsyncIOScheduler:
     )
 
     scheduler.add_job(
-        job_collect_vps_ssh,
+        job_collect_vps_easypanel,
         "interval",
         minutes=settings.vps_collect_interval_minutes,
-        id="collect_vps_ssh",
-        name="Coleta VPS via SSH",
+        id="collect_vps_easypanel",
+        name="Coleta VPS via EasyPanel",
         next_run_time=datetime.now(),
     )
 
@@ -165,7 +165,7 @@ async def reschedule_from_db(scheduler: AsyncIOScheduler):
             "mautic_api_interval": "collect_mautic_api",
             "gateway_interval": "collect_gateways",
             "mautic_db_interval": "collect_mautic_db",
-            "vps_ssh_interval": "collect_vps_ssh",
+            "vps_interval": "collect_vps_easypanel",
             "alert_engine_interval": "alert_engine",
         }
 
@@ -332,31 +332,28 @@ async def job_collect_mautic_db():
         await db.commit()
 
 
-async def job_collect_vps_ssh():
-    """Coleta métricas de VPS e logs de containers via SSH.
+async def job_collect_vps_easypanel():
+    """Coleta métricas de VPS e status de containers via EasyPanel API.
 
     Itera por VPS ativas (não por instâncias).
-    Para cada VPS, coleta métricas de recursos.
-    Para containers, usa o mapeamento instance_services para associar
-    cada container à instância correta.
+    Para cada VPS, coleta métricas de recursos e status dos serviços.
+    Usa o mapeamento instance_services para associar containers às instâncias.
     """
-    logger.debug("Job: collect_vps_ssh iniciado")
+    logger.debug("Job: collect_vps_easypanel iniciado")
     async with AsyncSessionLocal() as db:
         vps_servers = await _get_active_vps_servers(db)
         now = datetime.now(timezone.utc)
 
         for vps in vps_servers:
-            if not vps.host or not vps.private_key_enc:
-                logger.debug("VPS %s sem host/chave SSH, pulando.", vps.name)
+            if not vps.easypanel_url or not vps.api_key_enc:
+                logger.debug("VPS %s sem URL/API key EasyPanel, pulando.", vps.name)
                 continue
 
             try:
-                private_key_pem = decrypt_secret(vps.private_key_enc)
-                collector = VpsSSHCollector(
-                    host=vps.host,
-                    port=vps.ssh_port,
-                    username=vps.ssh_user,
-                    private_key_pem=private_key_pem,
+                api_key = decrypt_secret(vps.api_key_enc)
+                collector = EasyPanelCollector(
+                    easypanel_url=vps.easypanel_url,
+                    api_key=api_key,
                 )
                 snapshot = await collector.collect()
 
@@ -375,13 +372,10 @@ async def job_collect_vps_ssh():
                     disk_used_gb=snapshot.disk_used_gb,
                     disk_total_gb=snapshot.disk_total_gb,
                     load_avg_1m=snapshot.load_avg_1m,
-                    load_avg_5m=snapshot.load_avg_5m,
-                    load_avg_15m=snapshot.load_avg_15m,
                 )
                 db.add(vps_metric)
 
-                # Monta mapeamento container_name → (instance_id, service)
-                # para todas as instâncias desta VPS
+                # Monta mapeamento container_name → instance_id
                 container_to_instance: dict[str, uuid.UUID] = {}
                 for instance in (vps.instances or []):
                     if not instance.active:
@@ -395,7 +389,6 @@ async def job_collect_vps_ssh():
                     container_name = container["name"]
                     instance_id = container_to_instance.get(container_name)
 
-                    # Só salva se o container está mapeado a uma instância
                     if instance_id:
                         svc_status = ServiceStatus(
                             time=now,
@@ -413,31 +406,13 @@ async def job_collect_vps_ssh():
                             db, instance_id, container_name, container["status"]
                         )
 
-                # Salva logs filtrados (apenas de containers mapeados)
-                for entry in snapshot.log_entries:
-                    container_name = entry["container_name"]
-                    instance_id = container_to_instance.get(container_name)
-
-                    if instance_id:
-                        svc_log = ServiceLog(
-                            instance_id=instance_id,
-                            vps_id=vps.id,
-                            container_name=container_name,
-                            log_level=entry["log_level"],
-                            message=entry["message"],
-                            pattern_matched=entry.get("pattern_matched"),
-                            captured_at=entry["captured_at"],
-                        )
-                        db.add(svc_log)
-
                 # Verifica alertas de recursos da VPS
                 await alert_engine.check_vps_cpu(db, vps.id, snapshot.cpu_percent)
                 await alert_engine.check_vps_memory(db, vps.id, snapshot.memory_percent)
                 await alert_engine.check_vps_disk(db, vps.id, snapshot.disk_percent)
-                await alert_engine.check_log_patterns(db, None, snapshot.log_entries, vps_id=vps.id)
 
             except Exception as e:
-                logger.error("Erro ao coletar VPS SSH para %s: %s", vps.name, e)
+                logger.error("Erro ao coletar VPS EasyPanel para %s: %s", vps.name, e)
 
         await db.commit()
 

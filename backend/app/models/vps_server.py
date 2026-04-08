@@ -2,13 +2,13 @@
 vps_server.py — Modelo de servidores VPS (entidade independente).
 
 Cada VPS pode hospedar múltiplas instâncias Mautic.
-Credenciais SSH pertencem à VPS, não à instância.
+Monitoramento via API do EasyPanel (tRPC).
 """
 
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,7 +16,7 @@ from app.database import Base
 
 
 class VpsServer(Base):
-    """Servidor VPS monitorado via SSH."""
+    """Servidor VPS monitorado via EasyPanel API."""
 
     __tablename__ = "vps_servers"
 
@@ -24,13 +24,10 @@ class VpsServer(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    host: Mapped[str] = mapped_column(String(255), nullable=False)
-    ssh_port: Mapped[int] = mapped_column(Integer, default=22)
-    ssh_user: Mapped[str] = mapped_column(String(100), default="root")
 
-    # Chaves RSA (privada criptografada com Fernet, pública em texto)
-    private_key_enc: Mapped[str | None] = mapped_column(Text)
-    public_key: Mapped[str | None] = mapped_column(Text)
+    # EasyPanel connection
+    easypanel_url: Mapped[str] = mapped_column(String(255), nullable=False)
+    api_key_enc: Mapped[str | None] = mapped_column(Text)
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -46,4 +43,4 @@ class VpsServer(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<VpsServer {self.name} ({self.host})>"
+        return f"<VpsServer {self.name} ({self.easypanel_url})>"

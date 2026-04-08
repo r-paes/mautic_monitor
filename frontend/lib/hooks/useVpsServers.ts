@@ -47,16 +47,16 @@ export function useDeleteVpsServer() {
   });
 }
 
-export function useGenerateVpsSshKey() {
-  const qc = useQueryClient();
+export function useTestVpsConnection() {
   return useMutation({
-    mutationFn: (id: string) => vpsServersApi.generateSshKey(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: VPS_SERVERS_KEY }),
+    mutationFn: (id: string) => vpsServersApi.testConnection(id),
   });
 }
 
-export function useTestVpsSsh() {
-  return useMutation({
-    mutationFn: (id: string) => vpsServersApi.testSsh(id),
+export function useVpsEasyPanelServices(vpsId: string | undefined) {
+  return useQuery({
+    queryKey: [...VPS_SERVERS_KEY, vpsId, "services"],
+    queryFn: () => vpsServersApi.listServices(vpsId!),
+    enabled: !!vpsId,
   });
 }

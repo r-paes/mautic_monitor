@@ -24,9 +24,6 @@ httpx==0.27.0
 # Scheduler
 apscheduler==3.10.4
 
-# SSH / VPS monitoring
-paramiko==3.4.0
-
 # Cryptography (encrypt credentials in DB)
 cryptography==42.0.7
 

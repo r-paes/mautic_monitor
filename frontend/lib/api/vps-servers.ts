@@ -3,36 +3,38 @@ import { apiClient } from "./client";
 export interface VpsServer {
   id: string;
   name: string;
-  host: string;
-  ssh_port: number;
-  ssh_user: string;
-  public_key: string | null;
+  easypanel_url: string;
   active: boolean;
   instance_count: number;
 }
 
 export interface VpsServerCreate {
   name: string;
-  host: string;
-  ssh_port?: number;
-  ssh_user?: string;
+  easypanel_url: string;
+  api_key: string;
 }
 
 export interface VpsServerUpdate {
   name?: string;
-  host?: string;
-  ssh_port?: number;
-  ssh_user?: string;
+  easypanel_url?: string;
+  api_key?: string;
   active?: boolean;
 }
 
-export interface SshKeyOut {
-  public_key: string;
-}
-
-export interface SshTestResult {
+export interface ConnectionTestResult {
   success: boolean;
   message: string;
+  cpu_count?: number;
+  memory_total_mb?: number;
+  disk_total_gb?: number;
+}
+
+export interface EasyPanelService {
+  name: string;
+  project: string;
+  type: string;
+  status: string;
+  image: string;
 }
 
 export const vpsServersApi = {
@@ -51,9 +53,9 @@ export const vpsServersApi = {
   remove: (id: string) =>
     apiClient.delete(`/vps-servers/${id}`),
 
-  generateSshKey: (id: string) =>
-    apiClient.post<SshKeyOut>(`/vps-servers/${id}/generate-ssh-key`).then((r) => r.data),
+  testConnection: (id: string) =>
+    apiClient.post<ConnectionTestResult>(`/vps-servers/${id}/test-connection`).then((r) => r.data),
 
-  testSsh: (id: string) =>
-    apiClient.post<SshTestResult>(`/vps-servers/${id}/test-ssh`).then((r) => r.data),
+  listServices: (id: string) =>
+    apiClient.get<EasyPanelService[]>(`/vps-servers/${id}/services`).then((r) => r.data),
 };

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { MESSAGES } from "@/lib/constants/ui";
 import { useCreateService, useDeleteService } from "@/lib/hooks/useInstances";
+import { useVpsEasyPanelServices } from "@/lib/hooks/useVpsServers";
 import type { InstanceService } from "@/lib/api/instances";
 
 const SERVICE_TYPES = [
@@ -26,18 +27,19 @@ function serviceLabel(type: string) {
   return SERVICE_TYPES.find((t) => t.value === type)?.label ?? type;
 }
 
-const inputCls =
-  "w-full h-8 px-3 text-sm rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)] transition-colors";
-
 const selectCls =
   "h-8 px-3 text-sm rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-colors";
+
+const inputCls =
+  "w-full h-8 px-3 text-sm rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)] transition-colors";
 
 interface Props {
   instanceId: string;
   services: InstanceService[];
+  vpsId?: string | null;
 }
 
-export function ServiceManager({ instanceId, services }: Props) {
+export function ServiceManager({ instanceId, services, vpsId }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [newType, setNewType] = useState("database");
   const [newContainer, setNewContainer] = useState("");
@@ -46,9 +48,20 @@ export function ServiceManager({ instanceId, services }: Props) {
   const { mutate: createService, isPending: creating } = useCreateService();
   const { mutate: deleteService, isPending: deleting } = useDeleteService();
 
+  // Descoberta automática de containers via EasyPanel
+  const { data: epServices } = useVpsEasyPanelServices(vpsId ?? undefined);
+
   // Tipos já usados
   const usedTypes = new Set(services.map((s) => s.service_type));
   const availableTypes = SERVICE_TYPES.filter((t) => !usedTypes.has(t.value));
+
+  // Containers já usados por esta instância
+  const usedContainers = new Set(services.map((s) => s.container_name));
+
+  // Containers disponíveis (não usados)
+  const availableContainers = (epServices ?? []).filter(
+    (c) => !usedContainers.has(c.name)
+  );
 
   function handleAdd(e?: React.FormEvent | React.MouseEvent) {
     e?.preventDefault();
@@ -59,7 +72,6 @@ export function ServiceManager({ instanceId, services }: Props) {
         onSuccess: () => {
           setNewContainer("");
           setShowForm(false);
-          // Reset type to next available
           const nextAvailable = SERVICE_TYPES.find((t) => !usedTypes.has(t.value) && t.value !== newType);
           if (nextAvailable) setNewType(nextAvailable.value);
         },
@@ -88,6 +100,7 @@ export function ServiceManager({ instanceId, services }: Props) {
             icon={<Plus size={13} />}
             onClick={() => {
               setNewType(availableTypes[0].value);
+              setNewContainer("");
               setShowForm(true);
             }}
           >
@@ -132,11 +145,11 @@ export function ServiceManager({ instanceId, services }: Props) {
         </div>
       ) : (
         <p className="text-sm text-[var(--color-text-muted)] py-2">
-          Nenhum serviço configurado. Adicione os containers Docker que compõem esta instância.
+          Nenhum serviço configurado. Adicione os containers que compõem esta instância.
         </p>
       )}
 
-      {/* Formulário para adicionar novo serviço (usa div para não conflitar com form pai) */}
+      {/* Formulário para adicionar novo serviço */}
       {showForm && (
         <div className="flex items-end gap-2 p-3 rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-2)]">
           <div className="w-36">
@@ -157,15 +170,30 @@ export function ServiceManager({ instanceId, services }: Props) {
           </div>
           <div className="flex-1">
             <label className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1">
-              Nome do Container
+              Container
             </label>
-            <input
-              className={inputCls}
-              value={newContainer}
-              onChange={(e) => setNewContainer(e.target.value)}
-              placeholder="projeto_database"
-              autoFocus
-            />
+            {availableContainers.length > 0 ? (
+              <select
+                className={selectCls + " w-full"}
+                value={newContainer}
+                onChange={(e) => setNewContainer(e.target.value)}
+              >
+                <option value="">Selecione um container...</option>
+                {availableContainers.map((c) => (
+                  <option key={`${c.project}/${c.name}`} value={c.name}>
+                    {c.project} / {c.name} ({c.type})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                className={inputCls}
+                value={newContainer}
+                onChange={(e) => setNewContainer(e.target.value)}
+                placeholder="nome_do_container"
+                autoFocus
+              />
+            )}
           </div>
           <Button
             variant="primary"

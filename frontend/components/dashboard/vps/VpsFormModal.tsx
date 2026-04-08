@@ -1,15 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CheckCircle2, XCircle, Copy, Check, RefreshCw, Wifi } from "lucide-react";
+import { CheckCircle2, XCircle, Wifi } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { MESSAGES } from "@/lib/constants/ui";
 import {
   useCreateVpsServer,
   useUpdateVpsServer,
-  useGenerateVpsSshKey,
-  useTestVpsSsh,
+  useTestVpsConnection,
 } from "@/lib/hooks/useVpsServers";
 import type { VpsServer } from "@/lib/api/vps-servers";
 
@@ -21,16 +20,14 @@ interface Props {
 
 interface FormState {
   name: string;
-  host: string;
-  ssh_port: string;
-  ssh_user: string;
+  easypanel_url: string;
+  api_key: string;
 }
 
 const EMPTY: FormState = {
   name: "",
-  host: "",
-  ssh_port: "22",
-  ssh_user: "root",
+  easypanel_url: "",
+  api_key: "",
 };
 
 const inputCls =
@@ -56,20 +53,111 @@ function Field({
   );
 }
 
-// ─── Passo 1: Informações da VPS ─────────────────────────────────────────────
+export function VpsFormModal({ open, onClose, vps }: Props) {
+  const isEdit = !!vps;
+  const [form, setForm] = useState<FormState>(EMPTY);
 
-interface Step1Props {
-  form: FormState;
-  set: (k: keyof FormState, v: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  isPending: boolean;
-  onClose: () => void;
-}
+  const { mutate: create, isPending: creating } = useCreateVpsServer();
+  const { mutate: update, isPending: updating } = useUpdateVpsServer();
+  const { mutate: testConn, isPending: testing, data: testResult, reset: resetTest } = useTestVpsConnection();
+  const isPending = creating || updating;
 
-function Step1({ form, set, onSubmit, isPending, onClose }: Step1Props) {
+  useEffect(() => {
+    if (open) {
+      resetTest();
+      if (isEdit && vps) {
+        setForm({
+          name: vps.name,
+          easypanel_url: vps.easypanel_url,
+          api_key: "",
+        });
+      } else {
+        setForm(EMPTY);
+      }
+    }
+  }, [open, vps, isEdit, resetTest]);
+
+  function set(field: keyof FormState, value: string) {
+    setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (isEdit && vps) {
+      update(
+        {
+          id: vps.id,
+          data: {
+            name: form.name,
+            easypanel_url: form.easypanel_url,
+            ...(form.api_key ? { api_key: form.api_key } : {}),
+          },
+        },
+        { onSuccess: onClose }
+      );
+    } else {
+      create(
+        {
+          name: form.name,
+          easypanel_url: form.easypanel_url,
+          api_key: form.api_key,
+        },
+        {
+          onSuccess: (created) => {
+            testConn(created.id);
+            onClose();
+          },
+        }
+      );
+    }
+  }
+
+  function handleTestConnection() {
+    if (isEdit && vps) {
+      // Se editou a api_key, salva primeiro e depois testa
+      if (form.api_key) {
+        update(
+          {
+            id: vps.id,
+            data: {
+              name: form.name,
+              easypanel_url: form.easypanel_url,
+              api_key: form.api_key,
+            },
+          },
+          { onSuccess: () => testConn(vps.id) }
+        );
+      } else {
+        testConn(vps.id);
+      }
+    }
+  }
+
   return (
-    <>
-      <form id="vps-step1" onSubmit={onSubmit} className="space-y-4">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEdit ? "Editar VPS" : "Nova VPS"}
+      size="md"
+      footer={
+        <>
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={isPending}>
+            {MESSAGES.buttons.cancel}
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            loading={isPending}
+            onClick={handleSubmit as never}
+            type="submit"
+            form="vps-form"
+          >
+            {MESSAGES.buttons.save}
+          </Button>
+        </>
+      }
+    >
+      <form id="vps-form" onSubmit={handleSubmit} className="space-y-4">
         <Field label="Nome da VPS" required>
           <input
             className={inputCls}
@@ -80,295 +168,67 @@ function Step1({ form, set, onSubmit, isPending, onClose }: Step1Props) {
           />
         </Field>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div className="col-span-2">
-            <Field label="Host / IP" required>
-              <input
-                className={inputCls}
-                value={form.host}
-                onChange={(e) => set("host", e.target.value)}
-                placeholder="vps.exemplo.com"
-                required
-              />
-            </Field>
-          </div>
-          <Field label="Porta SSH">
-            <input
-              className={inputCls}
-              type="number"
-              value={form.ssh_port}
-              onChange={(e) => set("ssh_port", e.target.value)}
-              placeholder="22"
-            />
-          </Field>
-        </div>
-
-        <Field label="Usuário SSH">
+        <Field label="URL do EasyPanel" required>
           <input
             className={inputCls}
-            value={form.ssh_user}
-            onChange={(e) => set("ssh_user", e.target.value)}
-            placeholder="root"
+            value={form.easypanel_url}
+            onChange={(e) => set("easypanel_url", e.target.value)}
+            placeholder="https://easy.exemplo.com"
+            required
           />
         </Field>
-      </form>
 
-      <div className="flex justify-end gap-2 mt-6">
-        <Button variant="ghost" size="sm" onClick={onClose} disabled={isPending}>
-          {MESSAGES.buttons.cancel}
-        </Button>
-        <Button
-          variant="primary"
-          size="sm"
-          loading={isPending}
-          type="submit"
-          form="vps-step1"
-        >
-          Gerar chave SSH →
-        </Button>
-      </div>
-    </>
-  );
-}
+        <Field label={isEdit ? "API Key (deixe vazio para manter)" : "API Key"} required={!isEdit}>
+          <input
+            className={inputCls}
+            type="password"
+            value={form.api_key}
+            onChange={(e) => set("api_key", e.target.value)}
+            placeholder="Cole a API Key do EasyPanel"
+            required={!isEdit}
+          />
+        </Field>
 
-// ─── Passo 2: Chave pública + teste de conexão ────────────────────────────────
-
-interface Step2Props {
-  vpsId: string;
-  publicKey: string;
-  onClose: () => void;
-  onRegenerateKey: () => void;
-  isRegenerating: boolean;
-}
-
-function Step2({ vpsId, publicKey, onClose, onRegenerateKey, isRegenerating }: Step2Props) {
-  const [copied, setCopied] = useState(false);
-  const { mutate: testSsh, isPending: testing, data: testResult } = useTestVpsSsh();
-
-  function handleCopy() {
-    navigator.clipboard.writeText(publicKey).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
-
-  return (
-    <div className="space-y-5">
-      {/* Instrução */}
-      <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-2)] border border-[var(--color-border)] p-4 space-y-2">
-        <p className="text-sm font-semibold text-[var(--color-text)]">
-          Adicione a chave pública na VPS
-        </p>
-        <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-          Copie a chave abaixo e execute este comando na sua VPS como <code className="font-mono bg-[var(--color-surface)] px-1 rounded">root</code>:
-        </p>
-        <pre className="text-[11px] font-mono bg-[var(--color-surface)] rounded p-2 text-[var(--color-text-muted)] overflow-x-auto">
-          echo &apos;CHAVE_PÚBLICA&apos; &gt;&gt; ~/.ssh/authorized_keys
-        </pre>
-      </div>
-
-      {/* Chave pública */}
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="text-xs font-medium text-[var(--color-text-muted)]">
-            Chave pública RSA
-          </label>
-          <div className="flex gap-2">
-            <button
-              onClick={onRegenerateKey}
-              disabled={isRegenerating}
-              className="text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] flex items-center gap-1 transition-colors"
+        {/* Testar conexão (só em edição) */}
+        {isEdit && (
+          <div className="pt-2 space-y-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Wifi size={13} />}
+              loading={testing}
+              onClick={handleTestConnection}
+              type="button"
             >
-              <RefreshCw size={11} className={isRegenerating ? "animate-spin" : ""} />
-              Regenerar
-            </button>
-            <button
-              onClick={handleCopy}
-              className="text-[11px] text-[var(--color-primary)] hover:opacity-80 flex items-center gap-1 transition-colors"
-            >
-              {copied ? <Check size={11} /> : <Copy size={11} />}
-              {copied ? "Copiado!" : "Copiar"}
-            </button>
+              Testar conexão
+            </Button>
+
+            {testResult && (
+              <div
+                className={`flex items-start gap-3 rounded-[var(--radius-md)] border p-3 ${
+                  testResult.success
+                    ? "border-[var(--color-ok)] bg-[var(--color-ok)]/10"
+                    : "border-[var(--color-critical)] bg-[var(--color-critical)]/10"
+                }`}
+              >
+                {testResult.success ? (
+                  <CheckCircle2 size={16} className="text-[var(--color-ok)] mt-0.5 shrink-0" />
+                ) : (
+                  <XCircle size={16} className="text-[var(--color-critical)] mt-0.5 shrink-0" />
+                )}
+                <div>
+                  <p className="text-sm text-[var(--color-text)]">{testResult.message}</p>
+                  {testResult.success && testResult.cpu_count && (
+                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                      {testResult.cpu_count} CPUs · {testResult.memory_total_mb?.toFixed(0)} MB RAM · {testResult.disk_total_gb?.toFixed(0)} GB Disco
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-        <textarea
-          readOnly
-          value={publicKey}
-          rows={3}
-          className="w-full px-3 py-2 text-[11px] font-mono rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-muted)] resize-none focus:outline-none"
-        />
-      </div>
-
-      {/* Resultado do teste */}
-      {testResult && (
-        <div
-          className={`flex items-start gap-3 rounded-[var(--radius-md)] border p-3 ${
-            testResult.success
-              ? "border-[var(--color-ok)] bg-[var(--color-ok)]/10"
-              : "border-[var(--color-critical)] bg-[var(--color-critical)]/10"
-          }`}
-        >
-          {testResult.success ? (
-            <CheckCircle2 size={16} className="text-[var(--color-ok)] mt-0.5 shrink-0" />
-          ) : (
-            <XCircle size={16} className="text-[var(--color-critical)] mt-0.5 shrink-0" />
-          )}
-          <p className="text-sm text-[var(--color-text)]">{testResult.message}</p>
-        </div>
-      )}
-
-      {/* Ações */}
-      <div className="flex items-center justify-between gap-2 pt-1">
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={<Wifi size={13} />}
-          loading={testing}
-          onClick={() => testSsh(vpsId)}
-        >
-          Testar conexão
-        </Button>
-        <Button variant="primary" size="sm" onClick={onClose}>
-          {testResult?.success ? "Concluir" : "Fechar"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Modal principal ──────────────────────────────────────────────────────────
-
-export function VpsFormModal({ open, onClose, vps }: Props) {
-  const isEdit = !!vps;
-  const [step, setStep] = useState<1 | 2>(1);
-  const [form, setForm] = useState<FormState>(EMPTY);
-  const [createdId, setCreatedId] = useState<string>("");
-  const [publicKey, setPublicKey] = useState<string>("");
-
-  const { mutate: create, isPending: creating } = useCreateVpsServer();
-  const { mutate: update, isPending: updating } = useUpdateVpsServer();
-  const { mutate: generateKey, isPending: generatingKey } = useGenerateVpsSshKey();
-
-  useEffect(() => {
-    if (open) {
-      if (isEdit && vps) {
-        setForm({
-          name: vps.name,
-          host: vps.host,
-          ssh_port: String(vps.ssh_port ?? 22),
-          ssh_user: vps.ssh_user ?? "root",
-        });
-        if (vps.public_key) {
-          setCreatedId(vps.id);
-          setPublicKey(vps.public_key);
-          setStep(2);
-        } else {
-          setStep(1);
-        }
-      } else {
-        setForm(EMPTY);
-        setStep(1);
-        setCreatedId("");
-        setPublicKey("");
-      }
-    }
-  }, [open, vps, isEdit]);
-
-  function set(field: keyof FormState, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
-  }
-
-  function handleStep1Submit(e: React.FormEvent) {
-    e.preventDefault();
-
-    const onVpsReady = (id: string) => {
-      generateKey(id, {
-        onSuccess: (data) => {
-          setCreatedId(id);
-          setPublicKey(data.public_key);
-          setStep(2);
-        },
-      });
-    };
-
-    if (isEdit && vps) {
-      update(
-        {
-          id: vps.id,
-          data: {
-            name: form.name,
-            host: form.host || undefined,
-            ssh_port: form.ssh_port ? Number(form.ssh_port) : undefined,
-            ssh_user: form.ssh_user || undefined,
-          },
-        },
-        { onSuccess: () => onVpsReady(vps.id) }
-      );
-    } else {
-      create(
-        {
-          name: form.name,
-          host: form.host,
-          ssh_port: form.ssh_port ? Number(form.ssh_port) : undefined,
-          ssh_user: form.ssh_user || undefined,
-        },
-        {
-          onSuccess: (created) => onVpsReady(created.id),
-        }
-      );
-    }
-  }
-
-  const title = isEdit
-    ? step === 1
-      ? "Editar VPS"
-      : `Chave SSH — ${vps?.name}`
-    : step === 1
-    ? "Nova VPS"
-    : "Configurar acesso SSH";
-
-  return (
-    <Modal open={open} onClose={onClose} title={title} size="md">
-      {/* Indicador de passo */}
-      <div className="flex items-center gap-2 mb-5">
-        <div className={`flex items-center gap-1.5 text-xs font-medium ${step === 1 ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"}`}>
-          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 1 ? "bg-[var(--color-primary)] text-white" : "bg-[var(--color-ok)] text-white"}`}>
-            {step > 1 ? "✓" : "1"}
-          </span>
-          Informações
-        </div>
-        <div className="flex-1 h-px bg-[var(--color-border)]" />
-        <div className={`flex items-center gap-1.5 text-xs font-medium ${step === 2 ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"}`}>
-          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 2 ? "bg-[var(--color-primary)] text-white" : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]"}`}>
-            2
-          </span>
-          Chave SSH
-        </div>
-      </div>
-
-      {step === 1 && (
-        <Step1
-          form={form}
-          set={set}
-          onSubmit={handleStep1Submit}
-          isPending={creating || updating || generatingKey}
-          onClose={onClose}
-        />
-      )}
-
-      {step === 2 && (
-        <Step2
-          vpsId={createdId}
-          publicKey={publicKey}
-          onClose={onClose}
-          onRegenerateKey={() =>
-            generateKey(createdId, {
-              onSuccess: (data) => setPublicKey(data.public_key),
-            })
-          }
-          isRegenerating={generatingKey}
-        />
-      )}
+        )}
+      </form>
     </Modal>
   );
 }

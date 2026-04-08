@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Cpu, MemoryStick, HardDrive, Pencil, Trash2, Terminal, Server } from "lucide-react";
+import { Cpu, MemoryStick, HardDrive, Pencil, Trash2, Globe, Server } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -85,14 +85,10 @@ function VpsCard({ metric, vps, onEdit, onDelete }: VpsCardProps) {
               <p className="text-sm font-semibold text-[var(--color-text)] truncate">
                 {vps.name}
               </p>
-              {vps.public_key ? (
-                <Badge variant="info">
-                  <Terminal size={10} className="mr-1" />
-                  SSH
-                </Badge>
-              ) : (
-                <Badge variant="warning">Sem SSH</Badge>
-              )}
+              <Badge variant="info">
+                <Globe size={10} className="mr-1" />
+                EasyPanel
+              </Badge>
               {vps.instance_count > 0 && (
                 <Badge variant="neutral">
                   <Server size={10} className="mr-1" />
@@ -101,7 +97,7 @@ function VpsCard({ metric, vps, onEdit, onDelete }: VpsCardProps) {
               )}
             </div>
             <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5 font-mono">
-              {vps.ssh_user}@{vps.host}:{vps.ssh_port}
+              {vps.easypanel_url}
               {metric && ` · load: ${fmt(metric.load_avg_1m)}`}
             </p>
           </div>
@@ -177,9 +173,7 @@ function VpsCard({ metric, vps, onEdit, onDelete }: VpsCardProps) {
         </div>
       ) : (
         <div className="px-5 py-6 text-sm text-[var(--color-text-muted)]">
-          {vps.public_key
-            ? "Aguardando primeira coleta via SSH..."
-            : "Configure o acesso SSH para monitorar esta VPS."}
+          Aguardando primeira coleta via EasyPanel...
         </div>
       )}
     </Card>

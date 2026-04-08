@@ -11,7 +11,7 @@ import { useSchedulerConfigs, useUpdateSchedulerConfig } from "@/lib/hooks/useSc
 const CONFIG_ICONS: Record<string, string> = {
   mautic_api_interval: "API Mautic",
   mautic_db_interval: "DB Mautic",
-  vps_ssh_interval: "VPS (SSH)",
+  vps_interval: "VPS (EasyPanel)",
   gateway_interval: "Gateways",
   alert_engine_interval: "Motor de Alertas",
 };

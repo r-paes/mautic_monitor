@@ -252,6 +252,7 @@ export function InstanceFormModal({ open, onClose, instance }: Props) {
             <ServiceManager
               instanceId={instance.id}
               services={instance.services ?? []}
+              vpsId={form.vps_id || instance.vps_id}
             />
           </div>
         )}
